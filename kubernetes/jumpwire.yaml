@@ -62,6 +62,9 @@ spec:
               value: changeme  # this should be generated for production use
           ports:
             - containerPort: 4369
+              name: beam
+            - containerPort: 4000
+              name: http
 
 ---
 apiVersion: v1
@@ -74,7 +77,12 @@ metadata:
 spec:
   ports:
     - port: 4369
+      targetPort: beam
       protocol: TCP
       name: beam
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
   selector:
     jumpwire.ai/application: jumpwire
