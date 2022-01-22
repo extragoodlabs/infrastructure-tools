@@ -123,11 +123,13 @@ echo "Fetching the JumpWire docker compose file from GitHub..."
 #curl -o docker-compose.yaml https://raw.githubusercontent.com/extragood-io/jumpwire-deployment/main/docker-compose.yaml
 
 # send log of this install for continued support!
-# curl -L -H "Content-Type: application/json" -d '{
-#     "api_key": "<add key here>",
-#     "properties": {"domain": "${DOMAIN}", "platform": "${platform}", "distro": "${distro}"},
-#     "event": "magic_curl_install"
-# }' https://app.jumpwire.ai/capture/
+curl -L -H "Content-Type: application/json" https://events.jumpwire.ai/capture/ -d @- <<EOF
+{
+  "api_key": "phc_KSCQEEHeUZhMwHaFOOdA4OCf5vaxAsuSMWuRbbcsk5H",
+  "properties": {"distinct_id": "${DOMAIN}", "platform": "${platform}", "distro": "${distro}"},
+  "event": "magic_curl_install"
+}
+EOF
 
 # start up the stack
 echo "Running database migrations..."
