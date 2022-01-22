@@ -1,0 +1,49 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:13-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: jumpwire
+      POSTGRES_PASSWORD: jumpwire
+      POSTGRES_DB: jumpwire
+    volumes:
+      - db:/var/lib/postgresql/data
+  engine:
+    image: us-east1-docker.pkg.dev/jumpwire-public/jumpwire/engine:latest
+    ports:
+      - 4001:4001
+    environment:
+      JUMPWIRE_FRONTEND: ws://web:4000
+      JUMPWIRE_HTTP_PORT: 4001
+    env_file:
+      - engine.env
+    depends_on:
+      - web
+  web:
+    image: us-east1-docker.pkg.dev/jumpwire-public/jumpwire/web:latest
+    ports:
+      - 4000:4000
+    environment:
+      DATABASE_URL: ecto://jumpwire:jumpwire@db/jumpwire
+    env_file:
+      - web.env
+    depends_on:
+      - db
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy:/data
+    depends_on:
+      - web
+      - engine
+
+volumes:
+  db:
+  caddy:
