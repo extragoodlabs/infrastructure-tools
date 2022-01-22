@@ -123,10 +123,12 @@ echo "Fetching the JumpWire docker compose file from GitHub..."
 #curl -o docker-compose.yaml https://raw.githubusercontent.com/extragood-io/jumpwire-deployment/main/docker-compose.yaml
 
 # send log of this install for continued support!
+uuid=$(uuidgen 2>/dev/null | tr "[A-Z]" "[a-z]" || true)
+uuid="${uuid:-$DOMAIN}"
 curl -L -H "Content-Type: application/json" https://events.jumpwire.ai/capture/ -d @- <<EOF
 {
   "api_key": "phc_KSCQEEHeUZhMwHaFOOdA4OCf5vaxAsuSMWuRbbcsk5H",
-  "properties": {"distinct_id": "${DOMAIN}", "platform": "${platform}", "distro": "${distro}"},
+  "properties": {"distinct_id": "${uuid}", "domain": "${DOMAIN}", "platform": "${platform}", "distro": "${distro}"},
   "event": "magic_curl_install"
 }
 EOF
