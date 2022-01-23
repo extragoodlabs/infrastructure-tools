@@ -3,8 +3,7 @@ version: "3"
 services:
   db:
     image: postgres:13-alpine
-    ports:
-      - 5432:5432
+    restart: on-failure
     environment:
       POSTGRES_USER: jumpwire
       POSTGRES_PASSWORD: jumpwire
@@ -13,17 +12,20 @@ services:
       - db:/var/lib/postgresql/data
   engine:
     image: us-east1-docker.pkg.dev/jumpwire-public/jumpwire/engine:latest
+    restart: on-failure
     ports:
       - 4001:4001
     environment:
       JUMPWIRE_FRONTEND: ws://web:4000
       JUMPWIRE_HTTP_PORT: 4001
+      JUMWIRE_POSTGRES_PROXY_PORT: 6543
     env_file:
       - engine.env
     depends_on:
       - web
   web:
     image: us-east1-docker.pkg.dev/jumpwire-public/jumpwire/web:latest
+    restart: on-failure
     ports:
       - 4000:4000
     environment:
@@ -34,14 +36,26 @@ services:
       - db
   caddy:
     image: caddy:2-alpine
+    restart: on-failure
     ports:
       - 80:80
       - 443:443
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy:/data
+  envoy:
+    image: envoyproxy/envoy-contrib:v1.21-latest
+    restart: on-failure
+    ports:
+      - 5432:5432
+    volumes:
+      - caddy:/caddy
+      - ./envoy.pg_proxy.yaml:/envoy.yaml
+    command:
+      - -c
+      - /envoy.yaml
     depends_on:
-      - web
+      - caddy
       - engine
 
 volumes:

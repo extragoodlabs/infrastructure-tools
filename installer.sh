@@ -121,6 +121,10 @@ docker-compose stop || true
 echo "Fetching the JumpWire docker compose file from GitHub..."
 #rm -f docker-compose.yaml
 #curl -o docker-compose.yaml https://raw.githubusercontent.com/extragood-io/jumpwire-deployment/main/docker-compose.yaml
+#rm -f envoy.pg_proxy.yaml
+#curl -o envoy.pg_proxy.yaml https://raw.githubusercontent.com/extragood-io/jumpwire-deployment/main/envoy.pg_proxy.yaml
+
+sed -i envoy.pg_proxy.yaml -e "s/\${DOMAIN}/${DOMAIN}/g"
 
 # send log of this install for continued support!
 uuid=$(uuidgen 2>/dev/null | tr "[A-Z]" "[a-z]" || true)
