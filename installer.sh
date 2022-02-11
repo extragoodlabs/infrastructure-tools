@@ -132,7 +132,15 @@ uuid="${uuid:-$DOMAIN}"
 curl -L -H "Content-Type: application/json" https://events.jumpwire.ai/capture/ -d @- <<EOF
 {
   "api_key": "phc_KSCQEEHeUZhMwHaFOOdA4OCf5vaxAsuSMWuRbbcsk5H",
-  "properties": {"distinct_id": "${uuid}", "domain": "${DOMAIN}", "platform": "${platform}", "distro": "${distro}"},
+  "properties": {
+    "distinct_id": "${uuid}",
+    "\$groups": {
+      "organization": "${ORG_ID}"
+    },
+    "domain": "${DOMAIN}",
+    "platform": "${platform}",
+    "distro": "${distro}"
+  },
   "event": "magic_curl_install"
 }
 EOF
