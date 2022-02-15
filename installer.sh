@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -eu
 
+function missing_bin() {
+    echo "$1 not found, please install it and run this script again"
+    exit 123
+}
+
 # Check the OS
 platform="$(uname | tr '[:upper:]' '[:lower:]')"
 if [[ "$platform" != "linux" && "$platform" != "darwin" ]]; then
@@ -53,7 +58,7 @@ PATH="${PATH}:$(pwd)/.bin"
 
 # preflight checks
 echo "Checking for docker..."
-docker version >/dev/null
+docker version >/dev/null || missing_bin docker
 echo "Ok!"
 
 echo "Checking for docker-compose..."
@@ -62,7 +67,7 @@ if ! is_bin_in_path docker-compose; then
     curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o .bin/docker-compose
     chmod +x .bin/docker-compose
 fi
-docker-compose version >/dev/null
+docker-compose version >/dev/null || missing_bin docker-compose
 echo "Ok!"
 
 echo "Checking for jq..."
@@ -80,7 +85,7 @@ if ! is_bin_in_path jq; then
     esac
     chmod +x .bin/jq
 fi
-jq --version >/dev/null
+jq --version >/dev/null || missing_bin jq
 echo "Ok!"
 
 # parse the org id from the subject of the JWT token. the token won't actually be validated
