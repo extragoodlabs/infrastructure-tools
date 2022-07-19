@@ -16,12 +16,16 @@ provider "aws" {
   profile                  = "jump"
 }
 
+data "aws_caller_identity" "current" {}
+
 #
 # Create a secret and key to store the JUMPWIRE_TOKEN environment variable
 #
 
 
 locals {
+  aws_account_id = data.aws_caller_identity.current.account_id
+
   token_secret = {
     JUMPWIRE_TOKEN = "${var.jumpwire_token}"
   }
@@ -88,8 +92,8 @@ resource "aws_iam_role" "ecs_task_execution_role" {
           ]
           Effect = "Allow"
           Resource = [
-            "arn:aws:secretsmanager:${var.region}:${var.aws_account_id}:secret:${aws_secretsmanager_secret.jumpwire_token.name}*",
-            "arn:aws:kms:${var.region}:${var.aws_account_id}:key/${aws_kms_key.jumpwire.key_id}"
+            "arn:aws:secretsmanager:${var.region}:${local.aws_account_id}:secret:${aws_secretsmanager_secret.jumpwire_token.name}*",
+            "arn:aws:kms:${var.region}:${local.aws_account_id}:key/${aws_kms_key.jumpwire.key_id}"
           ]
         },
       ]

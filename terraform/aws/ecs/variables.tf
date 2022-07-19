@@ -4,11 +4,6 @@ variable "region" {
   default     = "us-east-2"
 }
 
-variable "aws_account_id" {
-  type        = string
-  description = "The id of the AWS account to create resources in"
-}
-
 variable "jumpwire_config_endpoint" {
   type        = string
   description = "Configuration endpoint URL for the engine to bootstrap from."

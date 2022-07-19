@@ -1,0 +1,21 @@
+[package]
+name = "jumpwire-crud-api-staff"
+version = "0.1.0"
+edition = "2021"
+
+
+# Running `cargo add DEPENDENCY_NAME` will
+# add the latest version of a dependency to the list,
+# and it will keep the alphabetic ordering for you.
+
+[dependencies]
+flate2 = "1.0.24"
+lambda_http = "0.5.2"
+log = "0.4.17"
+mysql = { version = "22.2.0", default-features = false, features = ["buffer-pool", "rustls-tls"] }
+simple_logger = "2.2.0"
+tokio = { version = "1", features = ["macros"] }
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
+
+
