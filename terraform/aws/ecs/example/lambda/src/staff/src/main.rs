@@ -33,7 +33,7 @@ async fn function_handler(event: Request) -> Result<impl IntoResponse, Error> {
         log::info!("Received UNKNOWN request on {}", path);
     }
 
-    let url = "mysql://admin:mZYV4xQea6epa6JCSDX8@mysql-demo-1.czgfrnfxh2g1.us-east-2.rds.amazonaws.com:3307/storefront";
+    let url = "mysql://admin:mZYV4xQea6epa6JCSDX8@mysql-demo-1.czgfrnfxh2g1.us-east-2.rds.amazonaws.com:3306/storefront";
     let pool = Pool::new(url)?;
 
     let mut conn = pool.get_conn()?;
