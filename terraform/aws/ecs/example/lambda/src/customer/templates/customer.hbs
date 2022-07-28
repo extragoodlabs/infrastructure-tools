@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyberpunk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>JumpWire Example CRUD app</title>
+    <link href="/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/theme-change@2.0.2/index.js"></script>
+
+</head>
+
+<body>
+    <div class="navbar bg-primary text-primary-content">
+        <a class="text-xl normal-case btn btn-ghost">JumpWire Example</a>
+        <select data-choose-theme class="select select-bordered">
+            <option value="light">Light theme</option>
+            <option value="dark">Dark theme</option>
+            <option value="cupcake">Cupcake theme</option>
+            <option value="bumblebee">Bumblebee theme</option>
+            <option value="emerald">Emerald theme</option>
+            <option value="corporate">Corporate theme</option>
+            <option value="synthwave">Synthwave theme</option>
+            <option value="retro">Retro theme</option>
+            <option value="cyberpunk">Cyberpunk theme</option>
+            <option value="valentine">Valentine theme</option>
+        </select>
+    </div>
+    <div class="w-3/4 py-12 mx-auto shadow-xl card bg-base-100">
+        <div class="card-body">
+            <h2 class="card-title">Customers!</h2>
+            <p>A list of all the customers in your account including
+                their name, title, email and role.</p>
+            {{#if showform}}
+            <form action="/customers" method="POST">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">First Name</span>
+                    </label>
+                    <label class="input-group">
+                        <span>First Name</span>
+                        <input type="text" name="first_name" class="input input-bordered" />
+                    </label>
+                    <label class="label">
+                        <span class="label-text">Last Name</span>
+                    </label>
+                    <label class="input-group">
+                        <span>Last Name</span>
+                        <input type="text" name="last_name" class="input input-bordered" />
+                    </label>
+                    <label class="label">
+                        <span class="label-text">Email</span>
+                    </label>
+                    <label class="input-group">
+                        <span>Email</span>
+                        <input type="email" name="email" class="input input-bordered" />
+                    </label>
+                </div>
+                <div class="justify-start mt-10 card-actions">
+                    <input type="hidden" name="customer_id" value="-1" />
+                    <input type="hidden" name="store_id" value="1" />
+                    <input type="hidden" name="address_id" value="1" />
+                    <input type="hidden" name="active" value="true" />
+                    <a href="/customers" class="btn">Cancel</a>
+                    <input type="submit" class="btn" />
+                </div>
+            </form>
+            {{else}}
+            <div class="justify-end card-actions">
+                <a href="/customers?new=t" class="btn">Create</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="table w-full table-zebra">
+                    <thead>
+                        <tr>
+                            <th>First</th>
+                            <th>Last</th>
+                            <th>Email</th>
+                            <th>Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each customers}}
+                        <tr>
+                            <td>{{first_name}}</td>
+                            <td>{{last_name}}</td>
+                            <td>{{email}}</td>
+                            <td>{{active}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+            <div class="justify-between card-actions">
+                <a href="/customers?page={{ pagination.prev }}" class="btn">Less</a>
+                <a href="/customers?page={{ pagination.next }}" class="btn">Next</a>
+            </div>
+            {{/if}}
+        </div>
+
+    </div>
+</body>
+
+</html>

@@ -9,7 +9,6 @@ RUN wget -qO- https://ziglang.org/builds/zig-linux-x86_64-0.10.0-dev.3027+0e26c6
 WORKDIR /usr/src/api
 COPY Cargo.toml Cargo.toml
 COPY src src
-RUN cargo lambda build --release --workspace --arm64
 RUN cargo lambda build --release --workspace --arm64 --output-format=zip
 
 FROM scratch as export
