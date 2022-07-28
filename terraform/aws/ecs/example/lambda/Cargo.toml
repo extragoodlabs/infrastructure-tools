@@ -1,5 +1,5 @@
 [package]
-name = "jumpwire-crud-api"
+name = "jumpwire-example-crud-api-default"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,10 +13,11 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 
 
 [package.metadata.lambda.env]
-RUST_LOG = "debug"
+RUST_LOG = "info"
 
 [workspace]
 
 members = [
     "src/staff",
+    "src/customer",
 ]

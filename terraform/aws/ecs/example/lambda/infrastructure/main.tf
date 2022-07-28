@@ -31,88 +31,87 @@ locals {
   default_timeout     = 60
 
   function_name = "${var.service_name}-lambda"
-  build_args    = "--build-arg binary=handler --build-arg log_level=${var.log_level}"
 }
 
-#
-# Create ECR repository
-# Build and push docker container to ECR repository
-#
 
-# resource "aws_ecr_repository" "lambda_repository" {
-#   name         = "${var.service_name}-crud-api"
-#   force_delete = true
-# }
+resource "aws_lambda_function" "staff_function" {
+  function_name = "${local.function_name}-staff"
 
-# resource "null_resource" "lambda_ecr_image_builder" {
-#   triggers = {
-#     docker_file     = filesha256("${local.root_dir}/Dockerfile")
-#     cargo_file      = filesha256("${local.root_dir}/Cargo.toml")
-#     cargo_lock_file = filesha256("${local.root_dir}/Cargo.lock")
-#     src_dir         = sha256(join("", [for f in fileset("${local.root_dir}/src", "**") : filesha256("${local.root_dir}/src/${f}")]))
-#   }
-
-#   provisioner "local-exec" {
-#     working_dir = local.root_dir
-#     interpreter = ["/bin/bash", "-c"]
-#     command     = <<-EOT
-#       aws ecr get-login-password --region ${var.region} --profile ${var.aws_profile} | docker login --username AWS --password-stdin ${local.aws_account_id}.dkr.ecr.${var.region}.amazonaws.com
-#       docker image build -t ${aws_ecr_repository.lambda_repository.repository_url}:latest ${local.build_args} .
-#       docker push ${aws_ecr_repository.lambda_repository.repository_url}:latest
-#     EOT
-#   }
-# }
-
-resource "null_resource" "lambda_cargo_builder" {
-  triggers = {
-    docker_file     = filesha256("${local.root_dir}/Dockerfile")
-    cargo_file      = filesha256("${local.root_dir}/Cargo.toml")
-    cargo_lock_file = filesha256("${local.root_dir}/Cargo.lock")
-    src_dir         = sha256(join("", [for f in fileset("${local.root_dir}/src", "**") : filesha256("${local.root_dir}/src/${f}")]))
-  }
-
-  provisioner "local-exec" {
-    working_dir = local.root_dir
-    interpreter = ["/bin/bash", "-c"]
-    command     = <<-EOT
-      docker build -t jumpwire-example-crud-api --build-arg name=jumpwire-crud-api-staff --output type=local,dest=release .
-    EOT
-  }
-}
-
-# data "aws_ecr_image" "lambda_image" {
-#   depends_on = [
-#     null_resource.lambda_ecr_image_builder
-#   ]
-
-#   repository_name = "${var.service_name}-crud-api"
-#   image_tag       = "latest"
-# }
-
-#
-# Build lambda function from container
-#
-
-resource "aws_lambda_function" "lambda_function" {
-  depends_on = [
-    null_resource.lambda_cargo_builder
-  ]
-  function_name = local.function_name
-
-  filename      = "${local.root_dir}/release/jumpwire-crud-api-staff.zip"
+  filename      = "${local.root_dir}/release/jumpwire-example-crud-api-staff.zip"
   architectures = ["arm64"]
   runtime       = "provided.al2"
   handler       = "boostrap"
 
-  source_code_hash = filebase64sha256("${local.root_dir}/release/jumpwire-crud-api-staff.zip")
+  source_code_hash = filebase64sha256("${local.root_dir}/release/jumpwire-example-crud-api-staff.zip")
 
   timeout     = local.default_timeout
   memory_size = local.default_memory_size
   role        = aws_iam_role.lambda_role.arn
 
+  environment {
+    variables = {
+      MYSQL_URL = var.mysql_url
+      RUST_LOG  = "info"
+    }
+  }
+
   vpc_config {
-    security_group_ids = ["sg-0d8777c2f154beda9"]
-    subnet_ids = ["subnet-0343d3298066c851b", "subnet-03a6411cf6733033b"]
+    security_group_ids = var.lambda_security_group_ids
+    subnet_ids = var.lambda_subnet_ids
+  }
+}
+
+resource "aws_lambda_function" "customer_function" {
+  function_name = "${local.function_name}-customer"
+
+  filename      = "${local.root_dir}/release/jumpwire-example-crud-api-customer.zip"
+  architectures = ["arm64"]
+  runtime       = "provided.al2"
+  handler       = "boostrap"
+
+  source_code_hash = filebase64sha256("${local.root_dir}/release/jumpwire-example-crud-api-customer.zip")
+
+  timeout     = local.default_timeout
+  memory_size = local.default_memory_size
+  role        = aws_iam_role.lambda_role.arn
+
+  environment {
+    variables = {
+      MYSQL_URL = var.mysql_url
+      RUST_LOG  = "info"
+    }
+  }
+
+  vpc_config {
+    security_group_ids = var.lambda_security_group_ids
+    subnet_ids = var.lambda_subnet_ids
+  }
+}
+
+resource "aws_lambda_function" "default_function" {
+  function_name = "${local.function_name}-default"
+
+  filename      = "${local.root_dir}/release/jumpwire-example-crud-api-default.zip"
+  architectures = ["arm64"]
+  runtime       = "provided.al2"
+  handler       = "boostrap"
+
+  source_code_hash = filebase64sha256("${local.root_dir}/release/jumpwire-example-crud-api-default.zip")
+
+  timeout     = local.default_timeout
+  memory_size = local.default_memory_size
+  role        = aws_iam_role.lambda_role.arn
+
+  environment {
+    variables = {
+      MYSQL_URL = var.mysql_url
+      RUST_LOG  = "info"
+    }
+  }
+
+  vpc_config {
+    security_group_ids = var.lambda_security_group_ids
+    subnet_ids = var.lambda_subnet_ids
   }
 }
 
@@ -120,9 +119,19 @@ resource "aws_lambda_function" "lambda_function" {
 # Logs to CloudWatch
 #
 
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.lambda_function.function_name}"
-  retention_in_days = 1
+resource "aws_cloudwatch_log_group" "staff_lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.staff_function.function_name}"
+  retention_in_days = var.log_retention_in_days
+}
+
+resource "aws_cloudwatch_log_group" "customer_lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.customer_function.function_name}"
+  retention_in_days = var.log_retention_in_days
+}
+
+resource "aws_cloudwatch_log_group" "default_lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.default_function.function_name}"
+  retention_in_days = var.log_retention_in_days
 }
 
 #
@@ -159,13 +168,127 @@ resource "aws_iam_role_policy_attachment" "basic_lambda_policy" {
 resource "aws_apigatewayv2_api" "api" {
   name          = "${var.service_name}-http-api"
   protocol_type = "HTTP"
-  target        = aws_lambda_function.lambda_function.arn
 }
 
-resource "aws_lambda_permission" "apigw" {
+resource "aws_lambda_permission" "staff_apigw" {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda_function.arn
+  function_name = aws_lambda_function.staff_function.arn
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "customer_apigw" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.customer_function.arn
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "default_apigw" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.default_function.arn
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
+
+##
+## /staff route
+##
+
+resource "aws_apigatewayv2_integration" "staff" {
+  api_id           = aws_apigatewayv2_api.api.id
+  integration_type = "AWS_PROXY"
+
+  connection_type           = "INTERNET"
+  description               = "Staff CRUD API"
+  integration_method        = "POST"
+  payload_format_version    = "2.0"
+  integration_uri           = aws_lambda_function.staff_function.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "staff" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /staff"
+
+  target = "integrations/${aws_apigatewayv2_integration.staff.id}"
+}
+
+resource "aws_apigatewayv2_deployment" "staff" {
+  api_id      = aws_apigatewayv2_route.staff.api_id
+  description = "Staff deployment"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+##
+## /customer route
+##
+
+resource "aws_apigatewayv2_integration" "customer" {
+  api_id           = aws_apigatewayv2_api.api.id
+  integration_type = "AWS_PROXY"
+
+  connection_type           = "INTERNET"
+  description               = "Customer CRUD API"
+  integration_method        = "POST"
+  payload_format_version    = "2.0"
+  integration_uri           = aws_lambda_function.customer_function.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "customer" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /customers"
+
+  target = "integrations/${aws_apigatewayv2_integration.customer.id}"
+}
+
+resource "aws_apigatewayv2_deployment" "customer" {
+  api_id      = aws_apigatewayv2_route.customer.api_id
+  description = "Customer deployment"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+##
+## $default route
+##
+
+resource "aws_apigatewayv2_integration" "default" {
+  api_id           = aws_apigatewayv2_api.api.id
+  integration_type = "AWS_PROXY"
+
+  connection_type           = "INTERNET"
+  description               = "Customer CRUD API"
+  integration_method        = "POST"
+  payload_format_version    = "2.0"
+  integration_uri           = aws_lambda_function.default_function.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "default" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "$default"
+
+  target = "integrations/${aws_apigatewayv2_integration.default.id}"
+}
+
+resource "aws_apigatewayv2_deployment" "default" {
+  api_id      = aws_apigatewayv2_route.default.api_id
+  description = "Default deployment"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id = aws_apigatewayv2_api.api.id
+  name   = "$default"
+  auto_deploy = true
 }
