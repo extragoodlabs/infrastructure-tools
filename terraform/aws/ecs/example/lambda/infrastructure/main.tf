@@ -50,7 +50,7 @@ resource "aws_lambda_function" "staff_function" {
 
   environment {
     variables = {
-      MYSQL_URL = var.mysql_url
+      POSTGRESQL_URL = var.postgresql_url
       RUST_LOG  = "info"
     }
   }
@@ -77,7 +77,7 @@ resource "aws_lambda_function" "customer_function" {
 
   environment {
     variables = {
-      MYSQL_URL = var.mysql_url
+      POSTGRESQL_URL = var.postgresql_url
       RUST_LOG  = "info"
     }
   }
@@ -104,7 +104,7 @@ resource "aws_lambda_function" "default_function" {
 
   environment {
     variables = {
-      MYSQL_URL = var.mysql_url
+      POSTGRESQL_URL = var.postgresql_url
       RUST_LOG  = "info"
     }
   }

@@ -1,8 +1,7 @@
 use tracing::{event, Level};
 use lambda_http::request::RequestContext;
 use lambda_http::{run, service_fn, Error, IntoResponse, Request, RequestExt, Response};
-use mysql::prelude::*;
-use mysql::{params, Opts, Pool, PooledConn};
+use tokio_postgres::{Client, NoTls};
 use serde::{Deserialize, Serialize};
 use handlebars::Handlebars;
 use std::collections::HashMap;
@@ -22,31 +21,32 @@ struct Staff {
 
 #[derive(Serialize, Deserialize)]
 struct Pagination {
-    page: i32,
-    next: i32,
-    prev: i32
+    page: i64,
+    next: i64,
+    prev: i64
 }
 
-fn post_staff(event: Request, mut conn: PooledConn) -> Result<Response<String>, Error> {
+
+async fn post_staff(event: Request, conn: Client) -> Result<Response<String>, Error> {
     let payload = match event.payload::<Staff>() {
         Ok(Some(staff)) => staff,
         _ => panic!("Can't create staff from input")
     };
 
-    let _ = conn.exec_drop(
-        r"INSERT INTO staff (first_name, last_name, email, username, password, store_id, address_id)
-        VALUES (:first_name, :last_name, :email, :username, :password, 1, 61)",
-        params! {
-            "first_name" => payload.first_name,
-            "last_name" => payload.last_name,
-            "email" => payload.email,
-            "username" => payload.username,
-            "password" => payload.password
-        }
-    )?;
+    let insert = conn.execute(
+        r"INSERT INTO staff (first_name, last_name, email, username, password, store_id, address_id) 
+        VALUES ($1, $2, $3, $4, $5, 1, 61)", 
+        &[
+            &payload.first_name,
+            &payload.last_name,
+            &payload.email,
+            &payload.username,
+            &payload.password
+        ]
+    ).await?;
 
     event!(Level::INFO, "Create STAFF - Last generated key: {}",
-        conn.last_insert_id());
+        insert);
 
     let resp = Response::builder()
         .status(303)
@@ -57,56 +57,55 @@ fn post_staff(event: Request, mut conn: PooledConn) -> Result<Response<String>, 
     Ok(resp)
 }
 
-fn get_single_staff(mut conn: PooledConn, staff_id: String) -> Result<Vec<Staff>, Error> {
+async fn get_single_staff(conn: Client, staff_id: String) -> Result<Vec<Staff>, Error> {
     event!(Level::INFO, "GET STAFF - by id: {}",
         staff_id);
 
-    let staff = conn
-        .exec_first(
-            "SELECT staff_id, first_name, last_name, email, username, password FROM staff WHERE staff_id=:staff_id",
-            params! {
-                staff_id
-            }
-        ).map(|row|{
-            row.map(|(staff_id, first_name, last_name, email, username, password)| Staff {
-                staff_id,
-                first_name,
-                last_name,
-                email,
-                username,
-                password
-            })
-        })?
-        .unwrap();
-
-    Ok(vec![staff])
-}
-
-fn get_list_staff(mut conn: PooledConn, page_num: i32) -> Result<Vec<Staff>, Error> {
-    let offset = page_num * 10;
-    event!(Level::INFO, "GET list of staff - at offset: {}",
-        offset);
-
-    let staff = conn
-        .exec_map(
-            "SELECT staff_id, first_name, last_name, email, username, password FROM staff ORDER BY last_update desc LIMIT 10 OFFSET :offset",
-            params! {
-                offset
-            },
-            |(staff_id, first_name, last_name, email, username, password)| {
-                Staff { staff_id, first_name, last_name, email, username, password }
-            },
-        )?;
+    let staff: Vec<Staff> = conn.query("SELECT staff_id, first_name, last_name, email, username, password FROM staff WHERE staff_id=$1", &[&staff_id])
+    .await?
+    .iter()
+    .map(|row| 
+        Staff {
+            staff_id: row.get(0),
+            first_name: row.get(1),
+            last_name: row.get(2),
+            email: row.get(3),
+            username: row.get(4),
+            password: row.get(5),
+        }
+    ).collect();
 
     Ok(staff)
 }
 
-fn get_staff(event: Request, conn: PooledConn) -> Result<Response<String>, Error> {
+async fn get_list_staff(conn: Client, page_num: i64) -> Result<Vec<Staff>, Error> {
+    let offset = page_num * 10;
+    event!(Level::INFO, "GET list of staff - at offset: {}",
+        offset);
+
+    let staff: Vec<Staff> = conn.query("SELECT staff_id, first_name, last_name, email, username, password FROM staff ORDER BY last_update desc LIMIT 10 OFFSET $1", &[&offset])
+    .await?
+    .iter()
+    .map(|row| 
+        Staff {
+            staff_id: row.get(0),
+            first_name: row.get(1),
+            last_name: row.get(2),
+            email: row.get(3),
+            username: row.get(4),
+            password: row.get(5),
+        }
+    ).collect();
+
+    Ok(staff)
+}
+
+async fn get_staff(event: Request, conn: Client) -> Result<Response<String>, Error> {
     let params = event.query_string_parameters();
 
     let page_num = match params.first("page") {
         Some(num) if num.starts_with("-") => 0,
-        Some(num) => num.parse::<i32>().unwrap_or(0),
+        Some(num) => num.parse::<i64>().unwrap_or(0),
         _ => 0,
     };
 
@@ -116,8 +115,8 @@ fn get_staff(event: Request, conn: PooledConn) -> Result<Response<String>, Error
     };
 
     let staff = match params.first("staff_id") {
-        Some(staff_id) => get_single_staff(conn, staff_id.to_string()),
-        _ => get_list_staff(conn, page_num),
+        Some(staff_id) => get_single_staff(conn, staff_id.to_string()).await,
+        _ => get_list_staff(conn, page_num).await,
     }?;
 
     let pagination = Pagination {
@@ -154,12 +153,12 @@ async fn router(
     method: &str,
     path: &str,
     event: Request,
-    pool: PooledConn,
+    conn: Client,
 ) -> Result<impl IntoResponse, Error> {
     let method_path = (method, path);
     match method_path {
-        ("GET", "/staff") => get_staff(event, pool),
-        ("POST", "/staff") => post_staff(event, pool),
+        ("GET", "/staff") => get_staff(event, conn).await,
+        ("POST", "/staff") => post_staff(event, conn).await,
 
         _ => panic!("Failed to match method and path"),
     }
@@ -180,13 +179,19 @@ async fn function_handler(event: Request) -> Result<impl IntoResponse, Error> {
 
     event!(Level::INFO, "Received {} request on {}", method, path);
 
-    let url: String = env::var("MYSQL_URL").unwrap();
-    let pool = Pool::new(Opts::from_url(&url)?)?;
+    let url: String = env::var("POSTGRESQL_URL").unwrap();
+    let (client, connection) =
+        tokio_postgres::connect(&url, NoTls).await?;
 
-    match pool.try_get_conn(1000) {
-        Ok(conn) => router(&method, &path, event, conn).await,
-        _ => panic!("Failed to connect to backend"),
-    }
+    // The connection object performs the actual communication with the database,
+    // so spawn it off to run on its own.
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+    
+    return router(&method, &path, event, client).await;
 }
 
 #[tokio::main]

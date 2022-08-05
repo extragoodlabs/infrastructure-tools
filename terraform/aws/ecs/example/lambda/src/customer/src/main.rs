@@ -1,8 +1,7 @@
 use lambda_http::request::RequestContext;
 use lambda_http::{run, service_fn, Error, IntoResponse, Request, RequestExt, Response};
 use log::LevelFilter;
-use mysql::prelude::*;
-use mysql::{params, Opts, Pool, PooledConn};
+use tokio_postgres::{Client, NoTls};
 use serde::{Deserialize, Serialize};
 use simple_logger::SimpleLogger;
 use handlebars::Handlebars;
@@ -17,36 +16,36 @@ struct Customer {
     first_name: String,
     last_name: String,
     email: Option<String>,
-    active: bool
+    active: i32
 }
 
 #[derive(Serialize, Deserialize)]
 struct Pagination {
-    page: i32,
-    next: i32,
-    prev: i32
+    page: i64,
+    next: i64,
+    prev: i64
 }
 
-fn post_customer(event: Request, mut conn: PooledConn) -> Result<Response<String>, Error> {
+async fn post_customer(event: Request, conn: Client) -> Result<Response<String>, Error> {
     let payload = match event.payload::<Customer>() {
         Ok(Some(customer)) => customer,
         _ => panic!("Can't create customer from input")
     };
 
-    let _ = conn.exec_drop(
+    let insert = conn.execute(
         r"INSERT INTO customer (first_name, last_name, email, active, store_id, address_id) 
-        VALUES (:first_name, :last_name, :email, :active, 1, 61)", 
-        params! {
-            "first_name" => payload.first_name,
-            "last_name" => payload.last_name,
-            "email" => payload.email,
-            "active" => payload.active,
-        }
-    )?;
+        VALUES ($1, $2, $3, $4, 1, 61)", 
+        &[
+            &payload.first_name,
+            &payload.last_name,
+            &payload.email,
+            &payload.active,
+        ]
+    ).await?;
 
     log::info!(
         "Create CUSTOMER - Last generated key: {}",
-        conn.last_insert_id()
+        insert
     );
 
     let resp = Response::builder()
@@ -58,53 +57,57 @@ fn post_customer(event: Request, mut conn: PooledConn) -> Result<Response<String
     Ok(resp)
 }
 
-fn get_single_customer(mut conn: PooledConn, customer_id: String) -> Result<Vec<Customer>, Error> {
+async fn get_single_customer(conn: Client, customer_id: String) -> Result<Vec<Customer>, Error> {
     log::info!("GET customers - by id {}", customer_id);
 
-    let customer = conn
-        .exec_first(
-            "SELECT customer_id, first_name, last_name, email, username, password FROM customer WHERE customer_id=:customer_id",
-            params! {
-                customer_id
-            }
-        ).map(|row|{
-            row.map(|(customer_id, first_name, last_name, email, active)| Customer {
-                customer_id,
-                first_name,
-                last_name,
-                email,
-                active,
-            })
-        })?
-        .unwrap();
-
-    Ok(vec![customer])
-}
-
-fn get_list_customers(mut conn: PooledConn, page_num: i32) -> Result<Vec<Customer>, Error> {
-    let offset = page_num * 10;
-    log::info!("GET customers - list at offset {}", offset);
-
-    let customers = conn
-        .exec_map(
-            "SELECT customer_id, first_name, last_name, email, active FROM customer ORDER BY last_update desc LIMIT 10 OFFSET :offset",
-            params! {
-                offset
-            },
-            |(customer_id, first_name, last_name, email, active)| {
-                Customer { customer_id, first_name, last_name, email, active }
-            },
-        )?;
+    let customers: Vec<Customer> = conn.query("SELECT customer_id, first_name, last_name, email, active FROM customer WHERE customer_id=$1", &[&customer_id])
+    .await?
+    .iter()
+    .map(|row| 
+        Customer {
+            customer_id: row.get(0),
+            first_name: row.get(1),
+            last_name: row.get(2),
+            email: row.get(3),
+            active: row.get(4),
+        }
+    ).collect();
 
     Ok(customers)
 }
 
-fn get_customers(event: Request, conn: PooledConn) -> Result<Response<String>, Error> {
+async fn get_list_customers(conn: Client, page_num: i64) -> Result<Vec<Customer>, Error> {
+    let offset: i64 = page_num * 10;
+    log::info!("GET customers - list at offset {}", offset);
+
+    let customers: Vec<Customer> = conn.query("SELECT customer_id, first_name, last_name, email, active FROM customer ORDER BY last_update desc LIMIT 10 OFFSET $1", &[&offset])
+    .await?
+    .iter()
+    .map(|row| 
+        Customer {
+            customer_id: row.get(0),
+            first_name: row.get(1),
+            last_name: row.get(2),
+            email: row.get(3),
+            active: row.get(4),
+        }
+    ).collect();
+
+    log::info!("Found {} customers", customers.len());
+    match customers.first() {
+        Some(first) => log::info!("Here's the first one: {:?}", first),
+        _ => log::info!("Nothing to see")
+    }
+    
+    Ok(customers)
+}
+
+async fn get_customers(event: Request, conn: Client) -> Result<Response<String>, Error> {
     let params = event.query_string_parameters();
 
     let page_num = match params.first("page") {
         Some(num) if num.starts_with("-") => 0,
-        Some(num) => num.parse::<i32>().unwrap_or(0),
+        Some(num) => num.parse::<i64>().unwrap_or(0),
         _ => 0,
     };
 
@@ -114,8 +117,8 @@ fn get_customers(event: Request, conn: PooledConn) -> Result<Response<String>, E
     };
 
     let customers = match params.first("customer_id") {
-        Some(customer_id) => get_single_customer(conn, customer_id.to_string()),
-        _ => get_list_customers(conn, page_num),
+        Some(customer_id) => get_single_customer(conn, customer_id.to_string()).await,
+        _ => get_list_customers(conn, page_num).await,
     }?;
 
     let pagination = Pagination {
@@ -149,12 +152,12 @@ async fn router(
     method: &str,
     path: &str,
     event: Request,
-    pool: PooledConn,
+    conn: Client,
 ) -> Result<impl IntoResponse, Error> {
     let method_path = (method, path);
     match method_path {
-        ("GET", "/customers") => get_customers(event, pool),
-        ("POST", "/customers") => post_customer(event, pool),
+        ("GET", "/customers") => get_customers(event, conn).await,
+        ("POST", "/customers") => post_customer(event, conn).await,
 
         _ => panic!("Failed to match method and path"),
     }
@@ -177,13 +180,19 @@ async fn function_handler(event: Request) -> Result<impl IntoResponse, Error> {
 
     log::info!("Received {} request on {}", method, path);
 
-    let url: String = env::var("MYSQL_URL").unwrap();
-    let pool = Pool::new(Opts::from_url(&url)?)?;
+    let url: String = env::var("POSTGRESQL_URL").unwrap();
+    let (client, connection) =
+        tokio_postgres::connect(&url, NoTls).await?;
 
-    match pool.try_get_conn(1000) {
-        Ok(conn) => router(&method, &path, event, conn).await,
-        _ => panic!("Failed to connect to backend"),
-    }
+    // The connection object performs the actual communication with the database,
+    // so spawn it off to run on its own.
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+    
+    return router(&method, &path, event, client).await;
 }
 
 #[tokio::main]

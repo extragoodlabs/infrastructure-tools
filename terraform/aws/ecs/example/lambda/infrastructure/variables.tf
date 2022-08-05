@@ -23,10 +23,10 @@ variable "log_level" {
   default = "info"
 }
 
-variable "mysql_url" {
+variable "postgresql_url" {
   type = string
   sensitive = true
-  description = "A full MySQL url in the form of mysql://[user]:[password]@[host]:[port]/[database]"
+  description = "A full PostgreSQL connection url in the form of postgresql://[user]:[password]@[host]:[port]/[database]"
 }
 
 variable "lambda_security_group_ids" {
