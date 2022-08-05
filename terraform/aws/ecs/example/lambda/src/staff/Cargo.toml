@@ -17,10 +17,11 @@ flate2 = "1.0.24"
 handlebars = "4.3.3"
 lambda_http = "0.5.2"
 log = "0.4.17"
-mysql = { version = "22.2.0", default-features = false, features = ["buffer-pool", "rustls-tls"] }
+postgres = "0.19.3"
 serde = "1.0.139"
 serde_json = "1.0.82"
 tokio = { version = "1", features = ["macros"] }
+tokio-postgres = "0.7.6"
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
 

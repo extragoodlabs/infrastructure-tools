@@ -80,7 +80,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 
   inline_policy {
-    name = "read_secrets_manager"
+    name = "read_secrets_manager_and_ssm"
 
     policy = jsonencode({
       Version = "2012-10-17"
@@ -88,13 +88,14 @@ resource "aws_iam_role" "ecs_task_execution_role" {
         {
           Action = [
             "secretsmanager:GetSecretValue",
-            "kms:Decrypt"
+            "kms:Decrypt",
+            "ssmmessages:CreateControlChannel",
+            "ssmmessages:CreateDataChannel",
+            "ssmmessages:OpenControlChannel",
+            "ssmmessages:OpenDataChannel"
           ]
           Effect = "Allow"
-          Resource = [
-            "arn:aws:secretsmanager:${var.region}:${local.aws_account_id}:secret:${aws_secretsmanager_secret.jumpwire_token.name}*",
-            "arn:aws:kms:${var.region}:${local.aws_account_id}:key/${aws_kms_key.jumpwire.key_id}"
-          ]
+          Resource = "*"
         },
       ]
     })
@@ -165,6 +166,10 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
       {
         "name": "JUMPWIRE_FRONTEND",
         "value": "${var.jumpwire_frontend}"
+      },
+      {
+        "name": "DEV_MODE",
+        "value": "1"
       }
     ],
     "secrets": [
@@ -198,6 +203,7 @@ TASK_DEFINITION
 resource "aws_cloudwatch_log_group" "jumpwire" {
   name = "/ecs/jumpwire-task"
   retention_in_days = 1
+  # kms_key_id = aws_kms_key.jumpwire.arn
 }
 
 resource "aws_ecs_cluster" "jumpwire" {
@@ -209,7 +215,7 @@ resource "aws_ecs_cluster" "jumpwire" {
       logging    = "OVERRIDE"
 
       log_configuration {
-        cloud_watch_encryption_enabled = true
+        cloud_watch_encryption_enabled = false
         cloud_watch_log_group_name     = aws_cloudwatch_log_group.jumpwire.name
       }
     }
@@ -233,14 +239,6 @@ resource "aws_ecs_cluster_capacity_providers" "jumpwire_fargate" {
 # which will be created in the cluster above
 #
 
-# data "aws_subnet" "stage1" {
-#   id = "subnet-0343d3298066c851b"
-# }
-
-# data "aws_subnet" "stage2" {
-#   id = "subnet-03a6411cf6733033b"
-# }
-
 resource "aws_ecs_service" "jumpwire" {
   name          = "jumpwire-service"
   cluster       = aws_ecs_cluster.jumpwire.id
@@ -248,11 +246,9 @@ resource "aws_ecs_service" "jumpwire" {
 
   # Track the latest ACTIVE revision
   task_definition = aws_ecs_task_definition.jumpwire_task.arn
+  enable_execute_command = true
 
   network_configuration {
-    subnets = [
-      "subnet-03a6411cf6733033b",
-      "subnet-0343d3298066c851b"
-    ]
+    subnets = var.vpc_subnet_ids
   }
 }
