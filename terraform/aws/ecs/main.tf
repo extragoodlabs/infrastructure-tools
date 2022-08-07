@@ -160,17 +160,9 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
     ],
     "environment": [
       {
-        "name": "JUMPWIRE_CONFIG_ENDPOINT",
-        "value": "${var.jumpwire_config_endpoint}"
-      },
-      {
         "name": "JUMPWIRE_FRONTEND",
         "value": "${var.jumpwire_frontend}"
-      },
-      {
-        "name": "DEV_MODE",
-        "value": "1"
-      }
+      } 
     ],
     "secrets": [
       {
