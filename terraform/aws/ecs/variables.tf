@@ -4,14 +4,10 @@ variable "region" {
   default     = "us-east-2"
 }
 
-variable "jumpwire_config_endpoint" {
-  type        = string
-  description = "Configuration endpoint URL for the engine to bootstrap from."
-}
-
 variable "jumpwire_frontend" {
   type        = string
   description = "Frontend endpoint URL (typically a websocket, or wss://) to sync the latest policy definitions"
+  default     = "wss://app.jumpwire.ai"
 }
 
 variable "jumpwire_token" {
