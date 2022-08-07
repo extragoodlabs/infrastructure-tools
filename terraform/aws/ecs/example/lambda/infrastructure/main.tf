@@ -11,9 +11,6 @@ terraform {
 
 provider "aws" {
   region                   = var.region
-  shared_config_files      = ["/home/ryan/.aws/config"]
-  shared_credentials_files = ["/home/ryan/.aws/credentials"]
-  profile                  = "jump"
 }
 
 data "aws_caller_identity" "current" {}

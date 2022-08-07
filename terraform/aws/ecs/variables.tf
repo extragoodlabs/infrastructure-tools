@@ -19,9 +19,10 @@ variable "jumpwire_token" {
 variable "jumpwire_image" {
   type        = string
   description = "Docker image for the latest version of the JumpWire engine."
+  default     = "jumpwire/jumpwire"
 }
 
 variable "vpc_subnet_ids" {
-  type = list(string)
+  type        = list(string)
   description = "A list of subnet_ids in which to launch the service"
 }

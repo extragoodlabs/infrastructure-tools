@@ -10,10 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region                   = var.region
-  shared_config_files      = ["/home/ryan/.aws/config"]
-  shared_credentials_files = ["/home/ryan/.aws/credentials"]
-  profile                  = "jump"
+  region = var.region
 }
 
 data "aws_caller_identity" "current" {}
@@ -94,7 +91,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
             "ssmmessages:OpenControlChannel",
             "ssmmessages:OpenDataChannel"
           ]
-          Effect = "Allow"
+          Effect   = "Allow"
           Resource = "*"
         },
       ]
@@ -193,7 +190,7 @@ TASK_DEFINITION
 #
 
 resource "aws_cloudwatch_log_group" "jumpwire" {
-  name = "/ecs/jumpwire-task"
+  name              = "/ecs/jumpwire-task"
   retention_in_days = 1
   # kms_key_id = aws_kms_key.jumpwire.arn
 }
@@ -237,7 +234,7 @@ resource "aws_ecs_service" "jumpwire" {
   desired_count = 1
 
   # Track the latest ACTIVE revision
-  task_definition = aws_ecs_task_definition.jumpwire_task.arn
+  task_definition        = aws_ecs_task_definition.jumpwire_task.arn
   enable_execute_command = true
 
   network_configuration {
