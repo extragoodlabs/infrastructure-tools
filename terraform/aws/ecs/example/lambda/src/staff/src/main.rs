@@ -57,7 +57,7 @@ async fn post_staff(event: Request, conn: Client) -> Result<Response<String>, Er
     Ok(resp)
 }
 
-async fn get_single_staff(conn: Client, staff_id: String) -> Result<Vec<Staff>, Error> {
+async fn get_single_staff(conn: Client, staff_id: i32) -> Result<Vec<Staff>, Error> {
     event!(Level::INFO, "GET STAFF - by id: {}",
         staff_id);
 
@@ -114,8 +114,13 @@ async fn get_staff(event: Request, conn: Client) -> Result<Response<String>, Err
         _ => false,
     };
 
-    let staff = match params.first("staff_id") {
-        Some(staff_id) => get_single_staff(conn, staff_id.to_string()).await,
+    let staff_id = match params.first("staff_id") {
+        Some(staff_id) => Some(staff_id.parse::<i32>().unwrap()),
+        _ => None,
+    };
+
+    let staff = match staff_id {
+        Some(staff_id) => get_single_staff(conn, staff_id).await,
         _ => get_list_staff(conn, page_num).await,
     }?;
 

@@ -57,7 +57,7 @@ async fn post_customer(event: Request, conn: Client) -> Result<Response<String>,
     Ok(resp)
 }
 
-async fn get_single_customer(conn: Client, customer_id: String) -> Result<Vec<Customer>, Error> {
+async fn get_single_customer(conn: Client, customer_id: i32) -> Result<Vec<Customer>, Error> {
     log::info!("GET customers - by id {}", customer_id);
 
     let customers: Vec<Customer> = conn.query("SELECT customer_id, first_name, last_name, email, active FROM customer WHERE customer_id=$1", &[&customer_id])
@@ -93,12 +93,6 @@ async fn get_list_customers(conn: Client, page_num: i64) -> Result<Vec<Customer>
         }
     ).collect();
 
-    log::info!("Found {} customers", customers.len());
-    match customers.first() {
-        Some(first) => log::info!("Here's the first one: {:?}", first),
-        _ => log::info!("Nothing to see")
-    }
-    
     Ok(customers)
 }
 
@@ -116,8 +110,13 @@ async fn get_customers(event: Request, conn: Client) -> Result<Response<String>,
         _ => false,
     };
 
-    let customers = match params.first("customer_id") {
-        Some(customer_id) => get_single_customer(conn, customer_id.to_string()).await,
+    let customer_id = match params.first("customer_id") {
+        Some(customer_id) => Some(customer_id.parse::<i32>().unwrap()),
+        _ => None,
+    };
+
+    let customers = match customer_id {
+        Some(customer_id) => get_single_customer(conn, customer_id).await,
         _ => get_list_customers(conn, page_num).await,
     }?;
 
@@ -126,7 +125,6 @@ async fn get_customers(event: Request, conn: Client) -> Result<Response<String>,
         next: page_num + 1, 
         prev: page_num - 1
     };
-
 
     let mut data = HashMap::new();
     data.insert("customers", to_json(&customers));
