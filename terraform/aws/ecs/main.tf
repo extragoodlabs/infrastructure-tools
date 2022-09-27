@@ -121,8 +121,8 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
   family                   = "jumpwire-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 1024
-  memory                   = 2048
+  cpu                      = var.task_cpu
+  memory                   = var.task_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   task_role_arn            = aws_iam_role.ecs_task_execution_role.arn
   container_definitions    = <<TASK_DEFINITION
@@ -130,8 +130,8 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
   {
     "name": "jumpwire-engine-container",
     "image": "${var.jumpwire_image}",
-    "cpu": 1024,
-    "memory": 2048,
+    "cpu": ${var.task_cpu},
+    "memory": ${var.task_memory},
     "essential": true,
     "portMappings": [
       {
@@ -153,13 +153,18 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
         "hostPort": 3306,
         "protocol": "tcp",
         "containerPort": 3306
+      },
+      {
+        "hostPort": 4369,
+        "protocol": "tcp",
+        "containerPort": 4369
       }
     ],
     "environment": [
       {
         "name": "JUMPWIRE_FRONTEND",
         "value": "${var.jumpwire_frontend}"
-      } 
+      }
     ],
     "secrets": [
       {

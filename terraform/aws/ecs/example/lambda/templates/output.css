@@ -1,5 +1,5 @@
 /*
-! tailwindcss v3.1.6 | MIT License | https://tailwindcss.com
+! tailwindcss v3.1.8 | MIT License | https://tailwindcss.com
 */
 
 /*
@@ -349,13 +349,6 @@ textarea {
 */
 
 input::-moz-placeholder, textarea::-moz-placeholder {
-  opacity: 1;
-  /* 1 */
-  color: #9ca3af;
-  /* 2 */
-}
-
-input:-ms-input-placeholder, textarea:-ms-input-placeholder {
   opacity: 1;
   /* 1 */
   color: #9ca3af;
@@ -961,7 +954,6 @@ html {
   --wa: 43 96% 56%;
   --er: 0 91% 71%;
   --bc: 0 12% 82%;
-  --pc: 141 100% 8%;
   --sc: 141 100% 10%;
   --ac: 35 100% 10%;
   --nc: 0 7% 81%;
@@ -978,6 +970,7 @@ html {
   --border-btn: 1px;
   --tab-border: 1px;
   --tab-radius: 0.5rem;
+  --pc: 141 100% 88%;
   --s: 141 75% 48%;
   --a: 35 69% 52%;
   --n: 0 10% 6%;
@@ -1725,7 +1718,6 @@ html {
   cursor: pointer;
   -webkit-user-select: none;
   -moz-user-select: none;
-   -ms-user-select: none;
        user-select: none;
   flex-wrap: wrap;
   align-items: center;
@@ -1903,7 +1895,6 @@ html {
   display: flex;
   -webkit-user-select: none;
   -moz-user-select: none;
-   -ms-user-select: none;
        user-select: none;
   align-items: center;
   justify-content: space-between;
@@ -1997,7 +1988,6 @@ html {
   cursor: pointer;
   -webkit-user-select: none;
   -moz-user-select: none;
-   -ms-user-select: none;
        user-select: none;
   -webkit-appearance: none;
      -moz-appearance: none;
@@ -2081,7 +2071,7 @@ html {
 }
 
 .btn.glass:focus-visible {
-  outline: 2px solid 0 0 2px currentColor;
+  outline: 2px solid currentColor;
 }
 
 .btn-ghost {
@@ -2099,7 +2089,7 @@ html {
 }
 
 .btn-ghost:focus-visible {
-  outline: 2px solid 0 0 2px currentColor;
+  outline: 2px solid currentColor;
 }
 
 .btn-disabled, 
@@ -2292,11 +2282,6 @@ html {
   --tw-placeholder-opacity: 0.2;
 }
 
-.input-disabled:-ms-input-placeholder, .input[disabled]:-ms-input-placeholder {
-  color: hsl(var(--bc) / var(--tw-placeholder-opacity));
-  --tw-placeholder-opacity: 0.2;
-}
-
 .input-disabled::placeholder, 
   .input[disabled]::placeholder {
   color: hsl(var(--bc) / var(--tw-placeholder-opacity));
@@ -2413,11 +2398,6 @@ html {
   --tw-placeholder-opacity: 0.2;
 }
 
-.select-disabled:-ms-input-placeholder, .select[disabled]:-ms-input-placeholder {
-  color: hsl(var(--bc) / var(--tw-placeholder-opacity));
-  --tw-placeholder-opacity: 0.2;
-}
-
 .select-disabled::placeholder, 
   .select[disabled]::placeholder {
   color: hsl(var(--bc) / var(--tw-placeholder-opacity));
@@ -2468,22 +2448,6 @@ html {
   text-transform: uppercase;
 }
 
-.table :where(:first-child) :where(:first-child) :where(th, td):first-child {
-  border-top-left-radius: 0.5rem;
-}
-
-.table :where(:first-child) :where(:first-child) :where(th, td):last-child {
-  border-top-right-radius: 0.5rem;
-}
-
-.table :where(:last-child) :where(:last-child) :where(th, td):first-child {
-  border-bottom-left-radius: 0.5rem;
-}
-
-.table :where(:last-child) :where(:last-child) :where(th, td):last-child {
-  border-bottom-right-radius: 0.5rem;
-}
-
 .table :where(tbody th, tbody td) {
   --tw-bg-opacity: 1;
   background-color: hsl(var(--b1) / var(--tw-bg-opacity));
@@ -2493,6 +2457,22 @@ html {
       .table-zebra tbody tr:nth-child(even) td {
   --tw-bg-opacity: 1;
   background-color: hsl(var(--b2, var(--b1)) / var(--tw-bg-opacity));
+}
+
+:where(.table *:first-child) :where(*:first-child) :where(th, td):first-child {
+  border-top-left-radius: 0.5rem;
+}
+
+:where(.table *:first-child) :where(*:first-child) :where(th, td):last-child {
+  border-top-right-radius: 0.5rem;
+}
+
+:where(.table *:last-child) :where(*:last-child) :where(th, td):first-child {
+  border-bottom-left-radius: 0.5rem;
+}
+
+:where(.table *:last-child) :where(*:last-child) :where(th, td):last-child {
+  border-bottom-right-radius: 0.5rem;
 }
 
 @-webkit-keyframes toast-pop {

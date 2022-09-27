@@ -103,6 +103,7 @@ resource "aws_lambda_function" "default_function" {
     variables = {
       POSTGRESQL_URL = var.postgresql_url
       RUST_LOG  = "info"
+      RUST_BACKTRACE = "1"
     }
   }
 
