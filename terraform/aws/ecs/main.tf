@@ -55,7 +55,6 @@ resource "aws_secretsmanager_secret_version" "jumpwire_token" {
 # This policy will appear under the name 'ecsTaskExecutionRoleWithSecrets'
 #
 
-
 data "aws_iam_policy" "ecs_task_execution" {
   arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
@@ -164,6 +163,14 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
       {
         "name": "JUMPWIRE_FRONTEND",
         "value": "${var.jumpwire_frontend}"
+      },
+      {
+        "name": "JUMPWIRE_ENV",
+        "value": "${var.jumpwire_environment}"
+      },
+      {
+        "name": "JUMPWIRE_POSTGRES_PROXY_POOL_SIZE",
+        "value": "12"
       }
     ],
     "secrets": [
@@ -177,7 +184,7 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
       "secretOptions": null,
       "options": {
         "awslogs-group": "/ecs/jumpwire-task",
-        "awslogs-region": "us-east-2",
+        "awslogs-region": "${var.region}",
         "awslogs-stream-prefix": "ecs"
       }
     }
@@ -197,7 +204,6 @@ TASK_DEFINITION
 resource "aws_cloudwatch_log_group" "jumpwire" {
   name              = "/ecs/jumpwire-task"
   retention_in_days = 1
-  # kms_key_id = aws_kms_key.jumpwire.arn
 }
 
 resource "aws_ecs_cluster" "jumpwire" {

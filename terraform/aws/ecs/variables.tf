@@ -22,6 +22,12 @@ variable "jumpwire_image" {
   default     = "jumpwire/jumpwire"
 }
 
+variable "jumpwire_environment" {
+  type        = string
+  description = "The name of the environment that this installation will target"
+  default     = "production"
+}
+
 variable "vpc_subnet_ids" {
   type        = list(string)
   description = "A list of subnet_ids in which to launch the service"
