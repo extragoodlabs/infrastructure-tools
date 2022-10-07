@@ -4,11 +4,11 @@
 
 This repository contains Infrastructure-as-Code templates for various tools and systems. They can be cloned and used directly, or serve as a reference for your own deployments of JumpWire.
 
-### Container distributions fo JumpWire
+#### Container distributions for JumpWire
 
 JumpWire releases a container distribution for the "JumpWire engine", which can run alongside application and database servers in your private network. This ensures that data never leaves your cloud, and gives full control for scaling a cluster of JumpWire engines to account for specific workloads. The container is hosted on [dockerhub](https://hub.docker.com/r/jumpwire/jumpwire).
 
-For more information on running JumpWire, please refer to our [documentation site](https://docs.jumpwire.ai/deployment)
+For more information on running JumpWire, please refer to our [documentation site](https://docs.jumpwire.ai/deployment).
 
 The following templates and tools are available or in development:
 

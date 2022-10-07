@@ -27,6 +27,12 @@ TF_VAR_vpc_subnet_ids='["subnet-0XXXXXX","subnet-0XXXXX"]' \
 terraform apply
 ```
 
-### Example application using JumpWire
+### Example application using AWS Lambda and RDS (PostgreSQL)
 
-The [example/lambda](example/lambda) subdirectory contains a serverless application to demonstrate how you would set up JumpWire in a real-world application. It deploys lambda functions, written in Rust, that provide a minimal HTML interface and can create and list records from a PostgreSQL database. It is configured to connect through a JumpWire proxy to a PostgreSQL database, such as one running in RDS.
+The [example/lambda](example/lambda) subdirectory contains a serverless application to demonstrate how you would set up JumpWire in a real-world application. It deploys three lambda functions, written in Rust, that provide a minimal HTML interface and capabilities for creating and listing records from a PostgreSQL database. It is configured to connect through a JumpWire proxy to a PostgreSQL database, such as one running in RDS.
+
+It demonstrates how seamlessly the JumpWire engine can be integrated into an existing application stack. There is no JumpWire-specific code in the lambda functions, they use a standard Rust PostgreSQL SDK to issue SQL queries. All that is necessary is for Rust code to connect to the JumpWire task is to use a `psql://` connection string with the task IP, instead of the RDS host name.
+
+This is the architecture of the example application, using a JumpWire ECS task to proxy connections between Lambda and RDS:
+
+![Example architecture diagram](example-architecture.png)
