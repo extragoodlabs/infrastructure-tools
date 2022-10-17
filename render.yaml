@@ -4,9 +4,10 @@ services:
     name: jumpwire-forest-admin
     env: node
     plan: free
-    branch: master # optional (defaults to master)
     rootDir: render.com/nodejs
     healthCheckPath: /
+    buildCommand: yarn
+    startCommand: yarn start
     envVars:
       - fromGroup: forest-admin-backend
 databases:
