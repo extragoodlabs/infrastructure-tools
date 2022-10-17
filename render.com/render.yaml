@@ -1,0 +1,15 @@
+services:
+  # A Docker web service
+  - type: web
+    name: jumpwire-forest-admin
+    env: node
+    plan: free
+    branch: master # optional (defaults to master)
+    rootDir: nodejs
+    healthCheckPath: /
+    envVars:
+      - fromGroup: forest-admin-backend
+databases:
+  - name: dev
+    plan: free
+    databaseName: storefront
