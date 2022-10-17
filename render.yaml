@@ -5,7 +5,7 @@ services:
     env: node
     plan: free
     branch: master # optional (defaults to master)
-    rootDir: nodejs
+    rootDir: render.com/nodejs
     healthCheckPath: /
     envVars:
       - fromGroup: forest-admin-backend
