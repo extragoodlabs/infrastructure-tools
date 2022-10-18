@@ -1,8 +1,5 @@
 require("dotenv").config();
 
-const express = require("express");
-const app = express();
-
 const { createAgent } = require("@forestadmin/agent");
 const {
   createSequelizeDataSource,
@@ -12,7 +9,7 @@ const {
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(
-  "postgres://postgres:postgres@localhost:5432/storefront"
+  process.env.POSTGRESQL_URL
 ); // Example for postgres
 require("./models")(sequelize);
 
@@ -26,7 +23,5 @@ createAgent({
   // Create your Sequelize datasource
   .addDataSource(createSequelizeDataSource(sequelize))
   // Replace "myExpressApp" by your Express application
-  .mountOnExpress(app)
+  .mountOnStandaloneServer(3000)
   .start();
-
-app.listen(3000);
