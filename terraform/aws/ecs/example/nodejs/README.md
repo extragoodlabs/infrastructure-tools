@@ -8,11 +8,13 @@ In this example, we will set up a backend for [Forest Admin](https://www.foresta
 
 Forest Admin is a tool for visualizing and manipulating data sources, replacing internally built tools with the ability to perform CRUD directly against tables. It also supports dashboarding arbitrary queries, creating alerts, etc.
 
+### But Why?
+
 Why deploy this tool? We are using Forest Admin to demonstrate how JumpWire can be plugged into an existing application without modifying any of the application's code or features. It's as simple as providing Sequelize, a popular NodeJS ORM, with a PostgreSQL URL for a JumpWire proxy instead of connecting directly to an RDS instance. No other changes are necessary, we are taking the Forest Admin agent off-the-shelf and running it with JumpWire.
 
 ### Getting Started
 
-Before diving into the code, sign up for an account on [Forest Admin](https://app.forestadmin.com/signup). This tool also uses a hybrid deployment model (similar to JumpWire) - Forest Admin hosts a SaaS dashboard that connects to a backend run "on premise", aka inside our VPC. This ensures that data accessed by Forest Admin front-end stays (mostly) local to our private cloud, as it's loaded client side by the browswer directly from the backend.
+Before diving into the code, sign up for an account on [Forest Admin](https://app.forestadmin.com/signup). This tool also uses a hybrid deployment model (similar to JumpWire) - Forest Admin hosts a SaaS dashboard that connects to a backend running "on premise", aka inside our VPC. This ensures that data accessed by the Forest Admin front-end stays (mostly) local to our private cloud, as it's fetched client side by the browswer directly from the backend.
 
 !['Forest Admin Architecture'](images/forest-admin-architecture.png)
 
@@ -22,8 +24,8 @@ There is a nice guided setup in Forest Admin for creating new projects. We'll ne
 
 The following tools and services need to be installed and set up prior to running this example:
 
-- **AWS VPC** should be created outside this example, as the included Terraform template does not include a VPC. Instead it takes the `vpc_id`, `vpc_subnet_ids` and `vpc_security_group_ids` as parameters.
-- **AWS RDS (PostgreSQL)** should be deployed into the private subnet of the VPC above. This will service as our main database to use with Forest Admin. We are testing with a Sakila schema modified for use on RDS, and sample data, found [here](https://github.com/jumpwire-ai/sakila/tree/master/rds-postgres-sakila-db)
+- **AWS VPC** should be created outside this example, as the Terraform template does not include a VPC. Instead it takes the `vpc_id`, `vpc_subnet_ids` and `vpc_security_group_ids` as parameters.
+- **AWS RDS (PostgreSQL)** should be deployed into the private subnet of the VPC above. This will service as our main database to use with Forest Admin. We are testing with a Sakila schema modified for use on RDS with sample data, found [here](https://github.com/jumpwire-ai/sakila/tree/master/rds-postgres-sakila-db)
 - **Docker** for building the NodeJS image locally
 - **AWS CLI v2** for publishing the Docker image to an ECR repository locally
 - **JumpWire engine** should also be deployed into the private subnet of the VPC.
@@ -40,7 +42,7 @@ The infrastructure as code sets up an [http api private integration](https://doc
 
 #### **SecretsManager**
 
-A SecretsManager secret contains JSON corresponding to environment variables for keys and authentication. Secret values are passed into Terraform using sensitive variables, so the value is never printed or logged. Secrets are injected as environment variables to the Docker container task, ensuring that the value is never exposed.
+A SecretsManager secret contains JSON corresponding to environment variables for keys and authentication. Secret values are passed into Terraform using sensitive variables, so the value is never printed or logged. Secrets are injected as environment variables to the Docker container task, ensuring that the values as never exposed end-to-end.
 
 The following secret values are required to run the example:
 
