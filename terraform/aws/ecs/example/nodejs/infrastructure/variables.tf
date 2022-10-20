@@ -9,9 +9,9 @@ variable "region" {
 }
 
 variable "aws_profile" {
-  type    = string
+  type        = string
   description = "Profile for set of AWS credentials to use when executing the cli command to upload Docker image to ECR"
-  default = "default"
+  default     = "default"
 }
 
 variable "forest_env_secret" {
@@ -32,8 +32,14 @@ variable "postgresql_url" {
   sensitive   = true
 }
 
+variable "node_env" {
+  type        = string
+  description = "NodeJS runtime environment"
+  default     = "production"
+}
+
 variable "vpc_id" {
-  type = string
+  type        = string
   description = "VPC ID corresponding to the VPC to launch all resources"
 }
 
@@ -43,7 +49,7 @@ variable "vpc_subnet_ids" {
 }
 
 variable "vpc_security_group_ids" {
-  type = list(string)
+  type        = list(string)
   description = "A list of security group IDs corresponding to the default security group of the VPC"
 }
 

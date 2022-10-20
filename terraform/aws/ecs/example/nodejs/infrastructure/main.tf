@@ -160,10 +160,10 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_attach
 #
 
 resource "aws_lb" "jumpwire" {
-  name               = "${var.service_name}-alb"
-  internal           = true
-  subnets            = var.vpc_subnet_ids
-  ip_address_type    = "ipv4"
+  name            = "${var.service_name}-alb"
+  internal        = true
+  subnets         = var.vpc_subnet_ids
+  ip_address_type = "ipv4"
 }
 
 resource "aws_lb_target_group" "jumpwire" {
@@ -184,6 +184,44 @@ resource "aws_lb_listener" "jumpwire" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.jumpwire.arn
   }
+}
+
+#
+# HTTP API
+#
+
+resource "aws_apigatewayv2_api" "api" {
+  name          = "${var.service_name}-api"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_vpc_link" "jumpwire" {
+  name               = "${var.service_name}-api-link"
+  security_group_ids = var.vpc_security_group_ids
+  subnet_ids         = var.vpc_subnet_ids
+}
+
+resource "aws_apigatewayv2_integration" "jumpwire" {
+  api_id           = aws_apigatewayv2_api.api.id
+  integration_type = "HTTP_PROXY"
+  integration_uri  = aws_lb_listener.jumpwire.arn
+
+  integration_method = "ANY"
+  connection_type    = "VPC_LINK"
+  connection_id      = aws_apigatewayv2_vpc_link.jumpwire.id
+}
+
+resource "aws_apigatewayv2_route" "jumpwire" {
+  api_id    = aws_apigatewayv2_api.api.id
+  route_key = "ANY /{proxy+}"
+
+  target = "integrations/${aws_apigatewayv2_integration.jumpwire.id}"
+}
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.api.id
+  name        = "$default"
+  auto_deploy = true
 }
 
 #
@@ -224,7 +262,11 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
     "environment": [
       {
         "name": "NODE_ENV",
-        "value": "dev"
+        "value": "${var.node_env}"
+      },
+      {
+        "name": "FOREST_AGENT_URL",
+        "value": "${aws_apigatewayv2_api.api.api_endpoint}"
       }
     ],
     "secrets": [
@@ -310,7 +352,7 @@ resource "aws_ecs_service" "jumpwire" {
   enable_execute_command = true
 
   network_configuration {
-    subnets          = var.vpc_subnet_ids
+    subnets = var.vpc_subnet_ids
   }
 
   load_balancer {
@@ -318,42 +360,4 @@ resource "aws_ecs_service" "jumpwire" {
     container_name   = "${var.service_name}-container"
     container_port   = 3000
   }
-}
-
-#
-# HTTP API
-#
-
-resource "aws_apigatewayv2_api" "api" {
-  name          = "${var.service_name}-api"
-  protocol_type = "HTTP"
-}
-
-resource "aws_apigatewayv2_vpc_link" "jumpwire" {
-  name               = "${var.service_name}-api-link"
-  security_group_ids = var.vpc_security_group_ids
-  subnet_ids         = var.vpc_subnet_ids
-}
-
-resource "aws_apigatewayv2_integration" "jumpwire" {
-  api_id           = aws_apigatewayv2_api.api.id
-  integration_type = "HTTP_PROXY"
-  integration_uri  = aws_lb_listener.jumpwire.arn
-
-  integration_method = "ANY"
-  connection_type    = "VPC_LINK"
-  connection_id      = aws_apigatewayv2_vpc_link.jumpwire.id
-}
-
-resource "aws_apigatewayv2_route" "jumpwire" {
-  api_id    = aws_apigatewayv2_api.api.id
-  route_key = "ANY /{proxy+}"
-
-  target = "integrations/${aws_apigatewayv2_integration.jumpwire.id}"
-}
-
-resource "aws_apigatewayv2_stage" "default" {
-  api_id = aws_apigatewayv2_api.api.id
-  name   = "$default"
-  auto_deploy = true
 }
