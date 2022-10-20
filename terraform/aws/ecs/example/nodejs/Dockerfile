@@ -15,5 +15,4 @@ RUN yarn install --immutable
 COPY . .
 
 EXPOSE 3000
-ENV NODE_ENV=production
-CMD [ "yarn", "start" ]
+CMD [ "node", "src/app.js", "-H", "0.0.0.0" ]

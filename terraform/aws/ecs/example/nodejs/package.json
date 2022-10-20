@@ -4,6 +4,7 @@
     "@forestadmin/datasource-sequelize": "^1.0.0",
     "dotenv": "^16.0.3",
     "elixir": "^0.1.2",
+    "express": "^4.18.2",
     "pg": "^8.8.0",
     "sequelize": "^6.25.2"
   },
