@@ -10,7 +10,8 @@ variable "region" {
 
 variable "aws_profile" {
   type    = string
-  default = "jump"
+  description = "Profile for set of AWS credentials to use when executing the cli command to upload Docker image to ECR"
+  default = "default"
 }
 
 variable "forest_env_secret" {
@@ -39,6 +40,11 @@ variable "vpc_id" {
 variable "vpc_subnet_ids" {
   type        = list(string)
   description = "A list of subnet_ids in which to launch the service. This should be the private subnets in the VPC above"
+}
+
+variable "vpc_security_group_ids" {
+  type = list(string)
+  description = "A list of security group IDs corresponding to the default security group of the VPC"
 }
 
 variable "task_cpu" {

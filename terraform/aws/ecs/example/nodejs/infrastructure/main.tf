@@ -331,7 +331,7 @@ resource "aws_apigatewayv2_api" "api" {
 
 resource "aws_apigatewayv2_vpc_link" "jumpwire" {
   name               = "${var.service_name}-api-link"
-  security_group_ids = ["sg-0d8777c2f154beda9"]
+  security_group_ids = var.vpc_security_group_ids
   subnet_ids         = var.vpc_subnet_ids
 }
 
