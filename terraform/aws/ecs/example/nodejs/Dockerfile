@@ -15,4 +15,4 @@ RUN yarn install --immutable
 COPY . .
 
 EXPOSE 3000
-CMD [ "node", "src/app.js", "-H", "0.0.0.0" ]
+CMD [ "node", "src/app.js" ]
