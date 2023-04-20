@@ -41,9 +41,11 @@ resource "aws_ecr_repository" "task_repository" {
 resource "null_resource" "task_ecr_image_builder" {
   triggers = {
     docker_file    = filesha256("${local.root_dir}/Dockerfile")
+    dockerignore_file    = filesha256("${local.root_dir}/.dockerignore")
     package_file   = filesha256("${local.root_dir}/package.json")
     yarn_lock_file = filesha256("${local.root_dir}/yarn.lock")
-    src_dir        = sha256(join("", [for f in fileset("${local.root_dir}/src", "**") : filesha256("${local.root_dir}/src/${f}")]))
+    app_file = filesha256("${local.root_dir}/app.js")
+    schema_file = filesha256("${local.root_dir}/.forestadmin-schema.json")
   }
 
   provisioner "local-exec" {

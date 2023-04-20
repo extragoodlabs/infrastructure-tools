@@ -1,7 +1,7 @@
 require("dotenv").config();
 const name = "forest-admin";
 
-console.log(`Booting ${name}`);
+console.log(`Booting ${name} agent`);
 
 const express = require("express");
 
@@ -19,7 +19,13 @@ app.get("/", (req, res) => {
 
 // Retrieve your sequelize instance
 const { createAgent } = require("@forestadmin/agent");
-const { createSqlDataSource } = require('@forestadmin/datasource-sql');
+const { createSequelizeDataSource } = require("@forestadmin/datasource-sequelize");
+const { Sequelize } = require('sequelize');
+
+const sequelize = new Sequelize(
+  process.env.POSTGRESQL_URL
+);
+require("./models")(sequelize);
 
 // Create your Forest Admin agent
 // This must be called BEFORE all other middleware on the app
@@ -27,13 +33,13 @@ createAgent({
   authSecret: process.env.FOREST_AUTH_SECRET,
   envSecret: process.env.FOREST_ENV_SECRET,
   isProduction: process.env.NODE_ENV === "production",
-  loggerLevel: "Debug", // Valid values are 'Debug', 'Info', 'Warn' and 'Error'
+  loggerLevel: "Info", // Valid values are 'Debug', 'Info', 'Warn' and 'Error'
   logger: (logLevel, message) => {
     console.log(logLevel, message);
   }
 })
   // Create your SQL datasource
-  .addDataSource(createSqlDataSource(process.env.POSTGRESQL_URL, { include: ['customer', 'staff', 'payment'] }))
+  .addDataSource(createSequelizeDataSource(sequelize))
   // Replace "myExpressApp" by your Express application
   .mountOnExpress(app)
   .start();

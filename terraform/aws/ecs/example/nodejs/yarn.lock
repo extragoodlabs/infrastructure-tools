@@ -63,6 +63,13 @@
   dependencies:
     "@forestadmin/datasource-toolkit" "1.4.2"
 
+"@forestadmin/datasource-sequelize@^1.2.15":
+  version "1.2.15"
+  resolved "https://registry.yarnpkg.com/@forestadmin/datasource-sequelize/-/datasource-sequelize-1.2.15.tgz#c9fd34f206494635040805981f0b980cc428d355"
+  integrity sha512-A9gesogPB6nndvj+OFV+2IPKOOM2jFvtD9VFZo4Mx6MLdl7rc41iDpagKGTZBNIG1U/D1kVzCCjGljknnFA7FQ==
+  dependencies:
+    "@forestadmin/datasource-toolkit" "1.4.3"
+
 "@forestadmin/datasource-sql@^1.4.0":
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/@forestadmin/datasource-sql/-/datasource-sql-1.4.0.tgz#599d64832ef2cd07241b5ad84a961ef502d7aeb8"
@@ -77,6 +84,15 @@
   version "1.4.2"
   resolved "https://registry.yarnpkg.com/@forestadmin/datasource-toolkit/-/datasource-toolkit-1.4.2.tgz#b2c426adc3f6f77fab4e49bd7f6281d96435d7e0"
   integrity sha512-irHo13wBJJJAM7f1+BNXCXmluum04OWmBLs7z+X3vTL3VZtREcXgKMobiCCledtj6EuXxToiCbW7gQoaEp9IiQ==
+  dependencies:
+    luxon "^3.2.1"
+    object-hash "^3.0.0"
+    uuid "^9.0.0"
+
+"@forestadmin/datasource-toolkit@1.4.3":
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/@forestadmin/datasource-toolkit/-/datasource-toolkit-1.4.3.tgz#0c11055066ab3bba1648428a52525e7028c22263"
+  integrity sha512-4zBHpZEuWMccxV/w4QMeWPKrxlLuUTizTwGRCYb5mRGhuQ98s+pfvV7l7LHmHWUu+TENUbDsWp7PIP+zrshURg==
   dependencies:
     luxon "^3.2.1"
     object-hash "^3.0.0"
@@ -967,7 +983,7 @@ pg-types@^2.1.0:
     postgres-date "~1.0.4"
     postgres-interval "^1.1.0"
 
-pg@^8.8.0:
+pg@^8.10.0:
   version "8.10.0"
   resolved "https://registry.yarnpkg.com/pg/-/pg-8.10.0.tgz#5b8379c9b4a36451d110fc8cd98fc325fe62ad24"
   integrity sha512-ke7o7qSTMb47iwzOSaZMfeR7xToFdkE71ifIipOAAaLIM0DYzfOAXlgFFmYUIE2BcJtvnVlGCID84ZzCegE8CQ==
@@ -1120,7 +1136,7 @@ sequelize-pool@^7.1.0:
   resolved "https://registry.yarnpkg.com/sequelize-pool/-/sequelize-pool-7.1.0.tgz#210b391af4002762f823188fd6ecfc7413020768"
   integrity sha512-G9c0qlIWQSK29pR/5U2JF5dDQeqqHRragoyahj/Nx4KOOQ3CPPfzxnfqFPCSB7x5UgjOgnZ61nSxz+fjDpRlJg==
 
-sequelize@^6.25.2, sequelize@^6.28.0:
+sequelize@^6.28.0, sequelize@^6.31.0:
   version "6.31.0"
   resolved "https://registry.yarnpkg.com/sequelize/-/sequelize-6.31.0.tgz#4e2e724e604e0f42a9a481e31dba918d649ee306"
   integrity sha512-nCPVtv+QydBmb3Us2jCNAr1Dx3gST83VZxxrUQn/JAVFCOrmYOgUaPUz5bevummyNf30zfHsZhIKYAOD3ULfTA==

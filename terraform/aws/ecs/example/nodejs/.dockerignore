@@ -8,6 +8,7 @@
 **/lerna-debug.log*
 
 **/node_modules
+**/infrastructure
 **/dist
 **/dist-ssr
 **/*.local
@@ -23,4 +24,3 @@
 **/*.sln
 **/*.sw?
 
-.forestadmin-schema.json
