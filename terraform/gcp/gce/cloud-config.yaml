@@ -1,0 +1,55 @@
+#cloud-config
+
+write_files:
+- path: /var/lib/docker/daemon.json
+  permissions: 0644
+  owner: root
+  content: |
+    {
+      "live-restore": true,
+      "storage-driver": "overlay2",
+      "log-opts": {
+        "max-size": "1024m"
+      }
+    }
+%{ if tls_cert != "" && tls_key != "" ~}
+- path: /etc/jumpwire/tls/cert.pem
+  permissions: 0644
+  owner: root
+  content: |
+    ${indent(4, tls_cert)}
+- path: /etc/jumpwire/tls/privkey.pem
+  permissions: 0644
+  owner: root
+  content: |
+    ${indent(4, tls_key)}
+%{ endif ~}
+- path: /etc/systemd/system/jumpwire.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Start the JumpWire proxy engine
+    Wants=network-online.target
+    After=network-online.target
+
+    [Service]
+    Restart=on-failure
+    ExecStart=/usr/bin/docker run --rm --name=jumpwire \
+    -p 5432:5432 -p 4000:4000 -p 9568:9568 -p 4369:4369 \
+    -v /etc/jumpwire:/etc/jumpwire \
+    -e "JUMPWIRE_TOKEN=${token}" \
+    -e "JUMPWIRE_DOMAIN=${domain}" \
+    %{if tls_cert != "" && tls_key != "" ~}
+    -e "JUMPWIRE_TLS_CERT=/etc/jumpwire/tls/cert.pem" \
+    -e "JUMPWIRE_TLS_KEY=/etc/jumpwire/tls/privkey.pem" \
+    %{ endif ~}
+    ghcr.io/jumpwire-ai/jumpwire:latest
+    ExecStop=/usr/bin/docker stop jumpwire
+    ExecStopPost=/usr/bin/docker rm jumpwire
+runcmd:
+- iptables -I INPUT 1 -p tcp -m tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+- iptables -I INPUT 1 -p tcp -m tcp --dport 5432 -m state --state NEW,ESTABLISHED -j ACCEPT
+- iptables -I INPUT 1 -p tcp -m tcp --dport 4369 -m state --state NEW,ESTABLISHED -j ACCEPT
+- systemctl daemon-reload
+- systemctl enable jumpwire.service && systemctl start jumpwire.service
