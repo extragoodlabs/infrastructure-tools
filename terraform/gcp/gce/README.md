@@ -3,7 +3,6 @@
 This folder contains a Terraform template to deploy the JumpWire engine.
 
 The following resources are created by this Terraform template:
-- A new SSH keypair that will be output to `./gce_ssh.key` and `./gce_ssh.pub`
 - A GCE instance
 - An external static IPv4 attached to the GCE instance
 - Firewall rules pointing to the GCE instance
