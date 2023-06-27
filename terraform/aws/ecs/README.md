@@ -17,7 +17,7 @@ Most of the variable inputs for this templates have defaults provided which shou
 
 Required variables:
 - `vpc_subnet_ids` is a list of strings that correspond to the subnets where JumpWire should be launched. Typically, these are private subnets in a VPC that is also running an RDS instance or EC2 instances
-- `jumpwire_token` is the authentication token listed on your JumpWire account's [configuration page](https://stage.jumpwire.ai/configuration)
+- `jumpwire_token` is the authentication token listed on your JumpWire cluster's [configuration page](https://app.jumpwire.io/clusters)
 
 Here is a sample command for running a Terraform apply:
 
