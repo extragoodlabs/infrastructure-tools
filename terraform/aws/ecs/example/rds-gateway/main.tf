@@ -10,7 +10,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region  = var.region
+  profile = var.aws_profile
 }
 
 data "aws_caller_identity" "current" {}
@@ -33,6 +34,8 @@ resource "random_password" "db_password" {
 locals {
   root_dir       = path.module
   aws_account_id = data.aws_caller_identity.current.account_id
+  rds_username   = "jumpwire"
+  rds_password   = random_password.db_password.result
 
   token_secret = {
     JUMPWIRE_ROOT_TOKEN     = "${var.jumpwire_root_token}"
@@ -61,9 +64,9 @@ resource "aws_secretsmanager_secret_version" "jumpwire_token" {
 }
 
 #
-# Create an RDS instance. If you already have a database running, you can
-# replace this with a data block. All we need is the username/password/hostname
-# to build our container.
+# Create an RDS instance.
+# If you already have a database running, you can replace this with a data block.
+# All we need is the username/password/hostname to configure the gateway container.
 #
 
 resource "aws_db_subnet_group" "test_db_subnet_group" {
@@ -76,8 +79,8 @@ resource "aws_db_instance" "test_db" {
   allocated_storage      = 10
   db_name                = "test_db"
   engine                 = "postgres"
-  username               = "jumpwire"
-  password               = random_password.db_password.result
+  username               = local.rds_username
+  password               = local.rds_password
   vpc_security_group_ids = var.vpc_security_group_ids
   db_subnet_group_name   = aws_db_subnet_group.test_db_subnet_group.name
   skip_final_snapshot    = true
@@ -109,7 +112,7 @@ resource "null_resource" "task_ecr_image_builder" {
     interpreter = ["/bin/bash", "-c"]
     command     = <<-EOT
       aws ecr get-login-password --region ${var.region} --profile ${var.aws_profile} | docker login --username AWS --password-stdin ${local.aws_account_id}.dkr.ecr.${var.region}.amazonaws.com
-      docker image build -t ${aws_ecr_repository.task_repository.repository_url}:latest --build-arg db_name=${aws_db_instance.test_db.db_name} --build-arg db_username=jumpwire --build-arg db_password=${random_password.db_password.result} --build-arg db_hostname=${aws_db_instance.test_db.address} .
+      docker image build -t ${aws_ecr_repository.task_repository.repository_url}:latest --build-arg db_name=${aws_db_instance.test_db.db_name} --build-arg db_username=${local.rds_username} --build-arg db_password=${local.rds_password} --build-arg db_hostname=${aws_db_instance.test_db.address} .
       docker push ${aws_ecr_repository.task_repository.repository_url}:latest
     EOT
   }
@@ -135,14 +138,14 @@ resource "aws_lb_target_group" "jumpwire" {
   protocol        = "HTTP"
   vpc_id          = var.vpc_id
 
-  
+
   health_check {
-    path = "/ping"
-    port = 4004
+    path              = "/ping"
+    port              = 4004
     healthy_threshold = 2
-    interval = 5
-    timeout = 2
-    protocol = "HTTP"
+    interval          = 5
+    timeout           = 2
+    protocol          = "HTTP"
   }
 }
 
@@ -336,10 +339,6 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
       {
         "name": "JUMPWIRE_SSO_BASE_URL",
         "value": "${aws_apigatewayv2_api.jumpwire_api.api_endpoint}"
-      },
-      {
-        "name": "LOG_LEVEL",
-        "value": "debug"
       }
     ],
     "secrets": [
