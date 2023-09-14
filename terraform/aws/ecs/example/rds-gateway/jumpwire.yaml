@@ -1,0 +1,18 @@
+manifests:
+  - id: 710276d9-c790-45bd-8f6a-3c7016d57315
+    name: DB_NAME
+    root_type: postgresql
+    credentials:
+      username: DB_USERNAME
+      password: DB_PASSWORD
+    configuration:
+      type: postgresql
+      database: DB_NAME
+      hostname: DB_HOSTNAME
+      ssl: true
+      port: 5432
+
+client_auth:
+  - id: 77d2e5c3-3786-4aeb-86d8-03c82a066134
+    name: psql
+    manifest_id: 710276d9-c790-45bd-8f6a-3c7016d57315
