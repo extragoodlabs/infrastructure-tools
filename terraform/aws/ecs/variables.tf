@@ -7,7 +7,7 @@ variable "region" {
 variable "jumpwire_frontend" {
   type        = string
   description = "Frontend endpoint URL (typically a websocket, or wss://) to sync the latest policy definitions"
-  default     = "wss://app.jumpwire.ai"
+  default     = "wss://app.jumpwire.io"
 }
 
 variable "jumpwire_token" {

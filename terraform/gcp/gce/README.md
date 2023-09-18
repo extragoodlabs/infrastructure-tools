@@ -13,7 +13,7 @@ This is a sample module invocation:
 
 ```hcl
 module "jumpwire-gce" {
-  source                = "github.com/jumpwire-ai/infrastructure-tools//terraform/gcp/gce"
+  source                = "github.com/extragoodlabs/infrastructure-tools//terraform/gcp/gce"
   instance_count        = 1
   project_id            = "my-project"
   region                = "europe-west3"

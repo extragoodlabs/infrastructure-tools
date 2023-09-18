@@ -44,7 +44,7 @@ write_files:
     -e "JUMPWIRE_TLS_CERT=/etc/jumpwire/tls/cert.pem" \
     -e "JUMPWIRE_TLS_KEY=/etc/jumpwire/tls/privkey.pem" \
     %{ endif ~}
-    ghcr.io/jumpwire-ai/jumpwire:latest
+    ghcr.io/extragoodlabs/jumpwire:latest
     ExecStop=/usr/bin/docker stop jumpwire
     ExecStopPost=/usr/bin/docker rm jumpwire
 runcmd:

@@ -13,7 +13,7 @@
   "version": "1.0.1",
   "description": "Sample admin site with JumpWire integrated, to demonstrate the flexbility of using JumpWire in most application stacks",
   "main": "app.js",
-  "repository": "https://github.com/jumpwire-ai/infrastructure-tools",
+  "repository": "https://github.com/extragoodlabs/infrastructure-tools",
   "author": "JumpWire",
   "license": "MIT",
   "private": false,
