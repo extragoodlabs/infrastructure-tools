@@ -28,7 +28,8 @@ resource "random_password" "db_password" {
 
 #
 # Create a secret and key to store the JUMPWIRE_ROOT_TOKEN and JUMPWIRE_ENCRYPTION_KEY variables
-# for the ECS task.
+# for the ECS task. These are sensitive values, that will be loaded from the secret and injected
+# as environment variables at runtime.
 #
 
 locals {
@@ -64,6 +65,113 @@ resource "aws_secretsmanager_secret_version" "jumpwire_token" {
 }
 
 #
+# Create security groups, to restrict traffic from the Internet
+# through the load balancer, ecs cluster, to the database
+# :80, :443 & :5432 /0 -> NLB -> ECS -> PG
+#
+
+resource "aws_security_group" "network_load_balancer" {
+  name        = "network_load_balancer"
+  description = "Allow HTTP/s/PG inbound traffic from Internet"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description      = "HTTP from Internet"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  ingress {
+    description      = "TLS from Internet"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  ingress {
+    description      = "PG from Internet"
+    from_port        = 5432
+    to_port          = 5432
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+resource "aws_security_group" "ecs_service" {
+  name        = "ecs_service"
+  description = "Allow HTTP/s/PG inbound traffic from the LB only"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "HTTP from NLB to container port"
+    from_port       = 4004
+    to_port         = 4004
+    protocol        = "tcp"
+    security_groups = [aws_security_group.network_load_balancer.id]
+  }
+
+  ingress {
+    description     = "TLS from NLB to container port"
+    from_port       = 4443
+    to_port         = 4443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.network_load_balancer.id]
+  }
+
+  ingress {
+    description     = "PG from NLB to container port"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.network_load_balancer.id]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+resource "aws_security_group" "rds_service" {
+  name        = "rds_service"
+  description = "Allow PG inbound traffic from ECS"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description     = "PG from ECS JumpWire task"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_service.id]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+}
+
+#
 # Create an RDS instance.
 # If you already have a database running, you can replace this with a data block.
 # All we need is the username/password/hostname to configure the gateway container.
@@ -81,7 +189,7 @@ resource "aws_db_instance" "test_db" {
   engine                 = "postgres"
   username               = local.rds_username
   password               = local.rds_password
-  vpc_security_group_ids = var.vpc_security_group_ids
+  vpc_security_group_ids = [aws_security_group.rds_service.id]
   db_subnet_group_name   = aws_db_subnet_group.test_db_subnet_group.name
   skip_final_snapshot    = true
 }
@@ -119,50 +227,10 @@ resource "null_resource" "task_ecr_image_builder" {
 }
 
 #
-# Create a Application Load Balancer for JumpWire to receive HTTP requests
-# This ALB will be forwarded traffic from the API Gateway with VPC link below
-#
-
-resource "aws_lb" "jumpwire" {
-  name            = "jumpwire-rds-gateway-alb"
-  internal        = true
-  subnets         = var.vpc_private_subnet_ids
-  ip_address_type = "ipv4"
-}
-
-resource "aws_lb_target_group" "jumpwire" {
-  name            = "jumpwire-rds-gateway-alb-tar"
-  target_type     = "ip"
-  ip_address_type = "ipv4"
-  port            = 80
-  protocol        = "HTTP"
-  vpc_id          = var.vpc_id
-
-
-  health_check {
-    path              = "/ping"
-    port              = 4004
-    healthy_threshold = 2
-    interval          = 5
-    timeout           = 2
-    protocol          = "HTTP"
-  }
-}
-
-resource "aws_lb_listener" "jumpwire" {
-  load_balancer_arn = aws_lb.jumpwire.arn
-  protocol          = "HTTP"
-  port              = 80
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.jumpwire.arn
-  }
-}
-
-#
-# Create a Network Load Balancer for JumpWire to expose a TCP port
-# for proxying database connections
+# Create a Network Load Balancer for JumpWire to expose TCP ports
+# to the Internet for our ECS gateway task. This includes
+# ports for proxying database connections, as well as HTTP ports for
+# gateway API.
 #
 
 resource "aws_lb" "jumpwire_nlb" {
@@ -170,69 +238,113 @@ resource "aws_lb" "jumpwire_nlb" {
   internal           = false
   load_balancer_type = "network"
   subnets            = var.vpc_public_subnet_ids
+  security_groups    = [aws_security_group.network_load_balancer.id]
 }
 
-resource "aws_lb_target_group" "jumpwire_nlb" {
-  name            = "jumpwire-rds-gateway-nlb-tar"
-  target_type     = "ip"
-  ip_address_type = "ipv4"
-  port            = 5432
-  protocol        = "TCP"
-  vpc_id          = var.vpc_id
+resource "aws_lb_target_group" "jumpwire_http_nlb" {
+  name                   = "jumpwire-rds-gateway-http-tar"
+  target_type            = "ip"
+  port                   = 4004
+  protocol               = "TCP"
+  vpc_id                 = var.vpc_id
+  connection_termination = true
+  deregistration_delay   = 30
 
   health_check {
-    protocol = "TCP"
+    protocol          = "TCP"
+    healthy_threshold = 2
+    interval          = 5
+    timeout           = 2
   }
 }
 
-resource "aws_lb_listener" "jumpwire_nlb" {
+resource "aws_lb_listener" "jumpwire_http_nlb" {
+  load_balancer_arn = aws_lb.jumpwire_nlb.arn
+  protocol          = "TCP"
+  port              = 80
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.jumpwire_http_nlb.arn
+  }
+}
+
+resource "aws_lb_target_group" "jumpwire_https_nlb" {
+  name                   = "jumpwire-rds-gateway-https-tar"
+  target_type            = "ip"
+  port                   = 4443
+  protocol               = "TCP"
+  vpc_id                 = var.vpc_id
+  connection_termination = true
+  deregistration_delay   = 30
+
+  health_check {
+    protocol          = "TCP"
+    healthy_threshold = 2
+    interval          = 5
+    timeout           = 2
+  }
+}
+
+resource "aws_lb_listener" "jumpwire_https_nlb" {
+  load_balancer_arn = aws_lb.jumpwire_nlb.arn
+  protocol          = "TCP"
+  port              = 443
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.jumpwire_https_nlb.arn
+  }
+}
+
+resource "aws_lb_target_group" "jumpwire_pg_nlb" {
+  name                   = "jumpwire-rds-gateway-pg-tar"
+  target_type            = "ip"
+  port                   = 5432
+  protocol               = "TCP"
+  vpc_id                 = var.vpc_id
+  connection_termination = true
+  deregistration_delay   = 30
+
+  health_check {
+    protocol          = "TCP"
+    healthy_threshold = 2
+    interval          = 5
+    timeout           = 2
+  }
+}
+
+resource "aws_lb_listener" "jumpwire_pg_nlb" {
   load_balancer_arn = aws_lb.jumpwire_nlb.arn
   protocol          = "TCP"
   port              = 5432
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.jumpwire_nlb.arn
+    target_group_arn = aws_lb_target_group.jumpwire_pg_nlb.arn
   }
 }
 
 #
-# HTTP API Gateway that connects the internet to the ALB 
-# to allow connections to JumpWire management API
+# Create a DNS record that will route traffic to our load balancer
+# We load in an existing Route53 Hosted Zone to register the record
+# If you don't have an existing Hosted Zone, you can create one here
 #
 
-resource "aws_apigatewayv2_api" "jumpwire_api" {
-  name          = "jumpwire-rds-gateway-api"
-  protocol_type = "HTTP"
+data "aws_route53_zone" "jumpwire_zone" {
+  name = var.route53_zone_name
 }
 
-resource "aws_apigatewayv2_vpc_link" "jumpwire" {
-  name               = "jumpwire-rds-gateway-api-link"
-  security_group_ids = var.vpc_security_group_ids
-  subnet_ids         = var.vpc_private_subnet_ids
-}
+resource "aws_route53_record" "jumpwire_hostname" {
+  zone_id = data.aws_route53_zone.jumpwire_zone.zone_id
+  name    = "test-db"
+  type    = "A"
 
-resource "aws_apigatewayv2_integration" "jumpwire" {
-  api_id           = aws_apigatewayv2_api.jumpwire_api.id
-  integration_type = "HTTP_PROXY"
-  integration_uri  = aws_lb_listener.jumpwire.arn
-
-  integration_method = "ANY"
-  connection_type    = "VPC_LINK"
-  connection_id      = aws_apigatewayv2_vpc_link.jumpwire.id
-}
-
-resource "aws_apigatewayv2_route" "jumpwire" {
-  api_id    = aws_apigatewayv2_api.jumpwire_api.id
-  route_key = "ANY /{proxy+}"
-
-  target = "integrations/${aws_apigatewayv2_integration.jumpwire.id}"
-}
-
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.jumpwire_api.id
-  name        = "$default"
-  auto_deploy = true
+  alias {
+    name                   = aws_lb.jumpwire_nlb.dns_name
+    zone_id                = aws_lb.jumpwire_nlb.zone_id
+    evaluate_target_health = true
+  }
 }
 
 #
@@ -272,6 +384,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
           Action = [
             "secretsmanager:GetSecretValue",
             "kms:Decrypt",
+            "ssm:GetParameters",
             "ssmmessages:CreateControlChannel",
             "ssmmessages:CreateDataChannel",
             "ssmmessages:OpenControlChannel",
@@ -299,7 +412,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy_attach
 resource "aws_ecs_task_definition" "jumpwire_task" {
   depends_on = [
     null_resource.task_ecr_image_builder,
-    aws_apigatewayv2_api.jumpwire_api
+    aws_lb.jumpwire_nlb
   ]
 
   family                   = "jumpwire-rds-gateway-task"
@@ -320,25 +433,40 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
     "portMappings": [
       {
         "hostPort": 4004,
+        "protocol": "tcp",
         "containerPort": 4004
       },
       {
         "hostPort": 4443,
+        "protocol": "tcp",
         "containerPort": 4443
       },
       {
         "hostPort": 5432,
+        "protocol": "tcp",
         "containerPort": 5432
       }
     ],
     "environment": [
       {
         "name": "JUMPWIRE_DOMAIN",
-        "value": "${aws_apigatewayv2_api.jumpwire_api.id}.execute-api.${var.region}.amazonaws.com"
+        "value": "${aws_route53_record.jumpwire_hostname.fqdn}"
       },
       {
         "name": "JUMPWIRE_SSO_BASE_URL",
-        "value": "${aws_apigatewayv2_api.jumpwire_api.api_endpoint}"
+        "value": "https://${aws_route53_record.jumpwire_hostname.fqdn}"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "value": "debug"
+      },
+      {
+        "name": "ACME_GENERATE_CERT",
+        "value": "true"
+      },
+      {
+        "name": "ACME_EMAIL",
+        "value": "hello@jumpwire.io"
       }
     ],
     "secrets": [
@@ -421,21 +549,36 @@ resource "aws_ecs_service" "jumpwire" {
   desired_count = 1
 
   # Track the latest ACTIVE revision
-  task_definition        = aws_ecs_task_definition.jumpwire_task.arn
-  enable_execute_command = true
+  task_definition                   = aws_ecs_task_definition.jumpwire_task.arn
+  health_check_grace_period_seconds = 60
+  enable_execute_command            = false
+  force_new_deployment              = true
 
   network_configuration {
-    subnets = var.vpc_private_subnet_ids
+    subnets         = var.vpc_private_subnet_ids
+    security_groups = [aws_security_group.ecs_service.id]
+  }
+
+  capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = "FARGATE"
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.jumpwire.arn
+    target_group_arn = aws_lb_target_group.jumpwire_http_nlb.arn
     container_name   = "jumpwire-gateway-container"
     container_port   = 4004
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.jumpwire_nlb.arn
+    target_group_arn = aws_lb_target_group.jumpwire_https_nlb.arn
+    container_name   = "jumpwire-gateway-container"
+    container_port   = 4443
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.jumpwire_pg_nlb.arn
     container_name   = "jumpwire-gateway-container"
     container_port   = 5432
   }

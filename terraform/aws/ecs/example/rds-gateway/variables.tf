@@ -10,15 +10,20 @@ variable "aws_profile" {
 }
 
 variable "jumpwire_root_token" {
-    type = string
-    description = "Auth token for connecting to JumpWire management API"
-    sensitive = true
+  type        = string
+  description = "Auth token for connecting to JumpWire management API"
+  sensitive   = true
 }
 
 variable "jumpwire_encryption_key" {
-    type = string
-    description = "Random key to use for database field encryption"
-    sensitive = true
+  type        = string
+  description = "Random key to use for database field encryption"
+  sensitive   = true
+}
+
+variable "route53_zone_name" {
+  type        = string
+  description = "Name of Route53 Hosted Zone where an alias record for JumpWire will be created"
 }
 
 variable "vpc_id" {
@@ -31,15 +36,9 @@ variable "vpc_private_subnet_ids" {
   description = "A list of private subnet_ids in which to launch services that do not need direct internet connection, such as the database and ecs task."
 }
 
-
 variable "vpc_public_subnet_ids" {
   type        = list(string)
   description = "A list of public subnet_ids in which to launch services that do need direct internet connection, such as a network load balancer."
-}
-
-variable "vpc_security_group_ids" {
-  type        = list(string)
-  description = "A list of security group IDs corresponding to the default security group of the VPC"
 }
 
 variable "task_cpu" {
