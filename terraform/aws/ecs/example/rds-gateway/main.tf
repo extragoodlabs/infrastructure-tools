@@ -159,15 +159,16 @@ resource "aws_security_group" "rds_service" {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
+    # Add additional security groups for other applications to connect
     security_groups = [aws_security_group.ecs_service.id]
   }
 
   egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    from_port        = 5432
+    to_port          = 5432
+    protocol         = "tcp"
+    # Add additional security groups for other applications to connect
+    security_groups = [aws_security_group.ecs_service.id]
   }
 }
 
@@ -430,6 +431,16 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
     "cpu": ${var.task_cpu},
     "memory": ${var.task_memory},
     "essential": true,
+    "systemControls": [
+        {
+            "namespace": "net.ipv4.tcp_keepalive_time",
+            "value": "65"
+        },
+        {
+            "namespace": "net.ipv4.tcp_keepalive_intvl",
+            "value": "65"
+        }
+    ],
     "portMappings": [
       {
         "hostPort": 4004,
@@ -457,16 +468,8 @@ resource "aws_ecs_task_definition" "jumpwire_task" {
         "value": "https://${aws_route53_record.jumpwire_hostname.fqdn}"
       },
       {
-        "name": "LOG_LEVEL",
-        "value": "debug"
-      },
-      {
         "name": "ACME_GENERATE_CERT",
-        "value": "true"
-      },
-      {
-        "name": "ACME_EMAIL",
-        "value": "hello@jumpwire.io"
+        "value": "false"
       }
     ],
     "secrets": [
@@ -550,8 +553,8 @@ resource "aws_ecs_service" "jumpwire" {
 
   # Track the latest ACTIVE revision
   task_definition                   = aws_ecs_task_definition.jumpwire_task.arn
-  health_check_grace_period_seconds = 60
-  enable_execute_command            = false
+  health_check_grace_period_seconds = 30
+  enable_execute_command            = true
   force_new_deployment              = true
 
   network_configuration {
