@@ -12,6 +12,11 @@ write_files:
         "max-size": "1024m"
       }
     }
+- path: /etc/jumpwire/jumpwire.yaml
+  permissions: 0644
+  owner: root
+  content: |
+    ${indent(4, config)}
 %{ if tls_cert != "" && tls_key != "" ~}
 - path: /etc/jumpwire/tls/cert.pem
   permissions: 0644
@@ -36,10 +41,13 @@ write_files:
     [Service]
     Restart=on-failure
     ExecStart=/usr/bin/docker run --rm --name=jumpwire \
-    -p 5432:5432 -p 4000:4000 -p 9568:9568 -p 4369:4369 \
+    -p 5432:5432 -p 4004:4004 -p 4443:4443 -p 9568:9568 -p 4369:4369 \
     -v /etc/jumpwire:/etc/jumpwire \
-    -e "JUMPWIRE_TOKEN=${token}" \
-    -e "JUMPWIRE_DOMAIN=${domain}" \
+    %{ for k, v in env ~}
+    %{ if v != "" ~}
+    -e "${k}=${v}" \
+    %{ endif ~}
+    %{ endfor ~}
     %{if tls_cert != "" && tls_key != "" ~}
     -e "JUMPWIRE_TLS_CERT=/etc/jumpwire/tls/cert.pem" \
     -e "JUMPWIRE_TLS_KEY=/etc/jumpwire/tls/privkey.pem" \

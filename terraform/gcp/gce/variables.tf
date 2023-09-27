@@ -92,12 +92,6 @@ variable "labels" {
   }
 }
 
-variable "token" {
-  type        = string
-  description = "The JumpWire cluster token, which will be stored as a secret and injected into the container runtime as an environment variable"
-  sensitive   = true
-}
-
 variable "domain" {
   type        = string
   description = "Domain to use when connecting to the JumpWire cluster."
@@ -121,4 +115,17 @@ variable "tls_cert" {
   type        = string
   description = "PEM encoded TLS certificate for use when a client connects to the JumpWire proxy. It should be valid for `domain`."
   default     = ""
+}
+
+variable "env" {
+  type = map(string)
+  description = "Environment variables to assign to JumpWire."
+  sensitive = true
+  default = {}
+}
+
+variable "config" {
+  type = string
+  description = "YAML string of JumpWire configuration. This will be loaded as a file on disk."
+  default = ""
 }

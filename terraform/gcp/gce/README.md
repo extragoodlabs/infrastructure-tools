@@ -12,6 +12,30 @@ The following resources are created by this Terraform template:
 This is a sample module invocation:
 
 ```hcl
+data "local_file" "public_ssh_key" {
+  filename = "id_rsa.pub"
+}
+
+data "local_sensitive_file" "tls_key" {
+  filename = "${path.module}/tls.key"
+}
+
+data "local_file" "tls_cert" {
+  filename = "${path.module}/tls.crt"
+}
+
+data "local_file" "config" {
+  filename = "${path.module}/jumpwire.yaml"
+}
+
+resource "random_password" "token" {
+  length = 32
+}
+
+resource "random_password" "key" {
+  length = 32
+}
+
 module "jumpwire-gce" {
   source                = "github.com/extragoodlabs/infrastructure-tools//terraform/gcp/gce"
   instance_count        = 1
@@ -20,25 +44,41 @@ module "jumpwire-gce" {
   zone                  = "europe-west3-c"
   network               = "my-network"
   subnetwork            = "https://www.googleapis.com/compute/v1/projects/my-project/regions/europe-west3/subnetworks/my-subnetwork"
-  token                 = "my-cluster-token"
   domain                = "jumpwire.example.com"
   ssh_keys              = {
-      my_user = local_file.my_public_ssh_key.content
+    my_user = data.local_file.public_ssh_key.content
   }
-  tls_key = local_file.tls_key.content
-  tls_cert = local_file.tls_cert.content
+  env = {
+    JUMPWIRE_ROOT_TOKEN     = base64encode(random_password.token.result)
+    JUMPWIRE_ENCRYPTION_KEY = base64encode(random_password.key.result)
+  }
+  tls_key  = data.local_file.tls_key.content
+  tls_cert = data.local_file.tls_cert.content
+  config   = data.local_file.config.content
+}
+
+output "external_addresses" {
+  description = "List of instance external addresses."
+  value       = module.jumpwire-gce.external_addresses
+}
+
+output "api_token" {
+  description = "Bearer token for authenticating to the API."
+  value       = base64encode(random_password.token.result)
+  sensitive   = true
 }
 ```
 
 ## Inputs
 
-The value needed for `token` is the authentication token listed on your JumpWire cluster's [configuration page](https://app.jumpwire.io/clusters)
-
+**JumpWire Enterprise**: The JumpWire controller token is listed on the JumpWire cluster's [configuration page](https://app.jumpwire.io/clusters) and is set as the environment variable `JUMPWIRE_TOKEN`.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | boot\_disk\_size | Size of the boot disk. | `number` | `10` | no |
+| config | YAML string of JumpWire configuration. This will be loaded as a file on disk. | `string` | "" | no |
 | domain | Domain that will be used to connect to the cluster. | `string` | `"localhost"` | no |
+| env | Environment variables to assign to JumpWire. | `map(string)` | {} | no |
 | instance\_count | Number of instances to create. | `number` | `1` | no |
 | instance\_type | Instance machine type. | `string` | `"n2-standard-4"` | no |
 | labels | Labels to be attached to the resources | `map(string)` | <pre>{<br>  "service": "jumpwire"<br>}</pre> | no |
@@ -54,7 +94,6 @@ The value needed for `token` is the authentication token listed on your JumpWire
 | subnetwork | Self link of the VPC subnet to use for the internal interface. | `string` | n/a | yes |
 | tls\_cert | PEM encoded TLS public certificate for use when a client connects to the JumpWire proxy. It should be valid for `domain`. | `string` | `""` | no |
 | tls\_key | PEM encoded TLS private key for use when a client connects to the JumpWire proxy. It should be valid for `domain`. | `string` | `""` | no |
-| token | JumpWire cluster token. | `string` | n/a | yes |
 | vm\_tags | Additional network tags for the instances. | `list(string)` | `["jumpwire"]` | no |
 | zone | Instance zone. | `string` | n/a | yes |
 

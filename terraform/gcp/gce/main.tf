@@ -53,13 +53,15 @@ resource "google_compute_instance" "jumpwire" {
     user-data = templatefile(
       "${path.module}/cloud-config.yaml",
       {
-        token         = var.token
-        domain        = var.domain
         tls_cert      = var.tls_cert
         tls_key       = var.tls_key
         instance_id   = count.index + 1
         instance_name = "${var.prefix}-${count.index + 1}"
         ip_address    = google_compute_address.jumpwire.*.address[count.index]
+        env = merge(var.env, {
+          JUMPWIRE_DOMAIN = var.domain,
+        })
+        config = var.config
       }
     )
   }
